@@ -1,0 +1,13 @@
+{
+    "collision": 20,
+    "goal": 200,
+    "timeStep": 1,
+    "distance": 5,
+    "overSpeeding": 5,
+    "overSteering": 5,
+    "Eps_penalty": 0.5,
+    "a_penalty": 0.5,
+    "v_goal_penalty": 30,
+    "differ_a": 0.5,
+    "differ_Eps": 0.5
+}  
