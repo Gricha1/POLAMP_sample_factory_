@@ -13,6 +13,7 @@ from math import cos, sin, tan
 from scipy.spatial import cKDTree
 from planning.utilsPlanning import *
 import time
+import cv2
 
 
 class State:
@@ -508,7 +509,7 @@ class ObsEnvironment(gym.Env):
 
         #DEBUG
         img = self.image_obs()[:, :, 0]
-        img = img[:200, :200]
+        #img = img[:200, :200]
         observation = img
         
         return observation
@@ -702,7 +703,7 @@ class ObsEnvironment(gym.Env):
 
         #DEBUG
         img = self.image_obs()[:, :, 0]
-        img = img[:200, :200]
+        #img = img[:200, :200]
         observation = img
 
         #print("#####DEBUG#####")
@@ -800,7 +801,7 @@ class ObsEnvironment(gym.Env):
         # if draw_arrow:
         #     plt.arrow(state[0], state[1], 2 * math.cos(state[2]), 2 * math.sin(state[2]), head_width=0.5, color='magenta')
 
-    def render(self, reward, figsize=(10, 8), save_image=True):
+    def render(self, reward, figsize=(2, 2), save_image=True):
         fig, ax = plt.subplots(figsize=figsize)
 
         x_delta = self.MAX_DIST_LIDAR
@@ -892,7 +893,7 @@ class ObsEnvironment(gym.Env):
         pass
 
 
-    def image_obs(self, figsize=(10, 8)):
+    def image_obs(self, figsize=(2, 2)):
         fig, ax = plt.subplots(figsize=figsize)
 
         x_delta = self.MAX_DIST_LIDAR
