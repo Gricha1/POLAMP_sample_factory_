@@ -588,9 +588,10 @@ class ObsEnvironment(gym.Env):
         if len(self.obstacle_segments) > 0 or len(self.dyn_obstacle_segments) > 0:
             bounding_box = self.getBB(state)
             for i, obstacle in enumerate(self.obstacle_segments):
-                if i in lst_indexes:
-                    if (intersectPolygons(obstacle, bounding_box)):
-                        return True
+                # if i in lst_indexes:
+                # print("Check collision")
+                if (intersectPolygons(obstacle, bounding_box)):
+                    return True
                     
             for obstacle in self.dyn_obstacle_segments:
                 mid_x = (obstacle[0][0].x + obstacle[1][1].x) / 2.
@@ -654,6 +655,7 @@ class ObsEnvironment(gym.Env):
 
 
     def step(self, action, next_dyn_states=[]):
+        # print(f"action: {action}")
         info = {}
         isDone = False
         new_state, overSpeeding, overSteering = self.vehicle.dynamic(self.current_state, action)
@@ -699,7 +701,7 @@ class ObsEnvironment(gym.Env):
         self.current_state = new_state
         self.last_action = action
         center_state = self.vehicle.shift_state(new_state)
-        observation, min_beam, lst_indexes = self.__getObservation(new_state)
+        # observation, min_beam, lst_indexes = self.__getObservation(new_state)
 
         #DEBUG
         img = self.image_obs()[:, :, 0]
@@ -711,7 +713,8 @@ class ObsEnvironment(gym.Env):
         #print((img != 255).sum())
         #print("#####DEBUG#####")
 
-
+        min_beam = 0
+        lst_indexes = []
         start_time = time.time()
         collision = self.isCollision(center_state, min_beam, lst_indexes)
         end_time = time.time()
@@ -776,6 +779,8 @@ class ObsEnvironment(gym.Env):
                 isDone = True
                 if collision:
                     info["Collision"] = True
+            print(f"info: {info}")
+            print(f"isDone: {isDone}")
         
         #print("DEBUG:", end=" ") # DEBUG
         #if "Collision" in info: # DEBUG
@@ -785,7 +790,12 @@ class ObsEnvironment(gym.Env):
         #      "prev:", self.vehicle.prev_a, self.vehicle.prev_Eps,)
         self.vehicle.prev_a = self.vehicle.a
         self.vehicle.prev_Eps = self.vehicle.Eps
-
+        
+        # print(f"info: {info}")
+        # print(f"isDone: {isDone}")
+        # if (self._max_episode_steps < self.stepCounter):
+        #     print(f"#### self._max_episode_steps: {self._max_episode_steps}")
+        #     print(f"#### error self.stepCounter: {self.stepCounter}")
         return observation, reward, isDone, info
 
 
@@ -839,7 +849,7 @@ class ObsEnvironment(gym.Env):
 
         center_goal_state = self.vehicle.shift_state(self.goal)
         agentBB = self.getBB(center_goal_state)
-        self.drawObstacles(agentBB, color="-g")
+        self.drawObstacles(agentBB, color="-cyan")
 
         vehicle_heading = Vec2d(cos(center_state.theta),
                  sin(center_state.theta)) * self.vehicle.length / 2
@@ -876,7 +886,7 @@ class ObsEnvironment(gym.Env):
             phi={theta:.0f}^\\circ, v={v:.2f} \, m/s, \
             steer={delta:.0f}^\\circ, a = {a:.2f}, m/s^2, r={reward:.0f}, \
             j_a = {j_a:.2f}, j_Eps = {j_Eps:.2f}$')
-     
+        
         if save_image:
             fig.canvas.draw()  # draw the canvas, cache the renderer
             image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
@@ -920,7 +930,7 @@ class ObsEnvironment(gym.Env):
             self.drawObstacles(agentBB)
             plt.arrow(dyn_obst.x, dyn_obst.y, 2 * math.cos(dyn_obst.theta), 2 * math.sin(dyn_obst.theta), head_width=0.5, color='magenta')
         
-        ax.plot([self.current_state.x, self.goal.x], [self.current_state.y, self.goal.y], '--r')
+        # ax.plot([self.current_state.x, self.goal.x], [self.current_state.y, self.goal.y], '--r')
 
         center_state = self.vehicle.shift_state(self.current_state)
         agentBB = self.getBB(center_state)
@@ -928,42 +938,26 @@ class ObsEnvironment(gym.Env):
 
         center_goal_state = self.vehicle.shift_state(self.goal)
         agentBB = self.getBB(center_goal_state)
-        self.drawObstacles(agentBB, color="-g")
+        self.drawObstacles(agentBB, color="-r")
 
         vehicle_heading = Vec2d(cos(center_state.theta),
                  sin(center_state.theta)) * self.vehicle.length / 2
         ax.arrow(self.current_state.x, self.current_state.y,
                  vehicle_heading.x, vehicle_heading.y, width=0.1, head_width=0.3,
-                 color='red')
+                 color='green')
 
         goal_heading = Vec2d(cos(center_goal_state.theta),
              sin(center_goal_state.theta)) * self.vehicle.length / 2
         ax.arrow(self.goal.x, self.goal.y, goal_heading.x,
-                 goal_heading.y, width=0.1, head_width=0.3, color='cyan')
-
-        for angle in self.angle_space:
-            position = Vec2d(self.current_state.x, self.current_state.y)
-            heading = Vec2d(cos(self.current_state.theta), sin(self.current_state.theta))
-            heading = Ray(position, heading).rotate(angle).heading * self.__sendBeam(self.current_state, angle)
-
-            ax.arrow(position.x, position.y, heading.x, heading.y, color='yellow')
-
-        dx = self.goal.x - self.current_state.x
-        dy = self.goal.y - self.current_state.y
-        theta = radToDeg(self.current_state.theta)
-        v = self.current_state.v
-        delta = radToDeg(self.current_state.steer)
-        Eps = self.vehicle.Eps
-        v_s = self.vehicle.v_s
-        a = self.vehicle.a
-        j_a = self.vehicle.j_a
-        j_Eps = self.vehicle.j_Eps
+                 goal_heading.y, width=0.1, head_width=0.3, color='red')
 
 
         fig.canvas.draw()  # draw the canvas, cache the renderer
         image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
         image = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
         #image = image.reshape(1600, 2000, 3)
+        # plt.show()
+        # plt.pause(10)
         plt.close('all')
         return image
 
