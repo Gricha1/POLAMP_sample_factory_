@@ -50,8 +50,15 @@ def custom_parse_args(argv=None, evaluation=False):
     # cfg.recurrence = 1
     # cfg.use_rnn = 0
     # cfg.encoder_extra_fc_layers = 0
-    cfg.encoder_type = 'mlp'
-    cfg.encoder_subtype = 'mlp_mujoco'
+
+    #cfg.encoder_type = 'mlp'
+    print("###########DEBUG############")
+    print("encoder type setting")
+    print("###########DEBUG############")
+
+
+    cfg.encoder_type = 'conv'
+    cfg.encoder_subtype = 'convnet_simple'
     cfg.encoder_extra_fc_layers = 0
     cfg.train_for_env_steps = 200000000
     # cfg.custom_env_episode_len = 250

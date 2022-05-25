@@ -187,11 +187,18 @@ class ObsEnvironment(gym.Env):
             + self.soft_constraints == 1, "custom assert: only one constraint is acceptable"
 
         other_features = len(self.getDiff(State(0, 0, 0, 0, 0)))
-        state_min_box = [-np.inf for _ in range(47)] * self.frame_stack + [-np.inf] * self.frame_stack
-        state_max_box = [np.inf for _ in range(47)] * self.frame_stack + [np.inf] * self.frame_stack                                                                           
+        #state_min_box = [-np.inf for _ in range(47)] * self.frame_stack + [-np.inf] * self.frame_stack
+        #state_max_box = [np.inf for _ in range(47)] * self.frame_stack + [np.inf] * self.frame_stack                                                                           
+        state_min_box = [[[-np.inf for i in range(200)] for j in range(200)] for _ in range(self.frame_stack)]
+        state_max_box = [[[np.inf for i in range(200)] for j in range(200)] for _ in range(self.frame_stack)]
         obs_min_box = np.array(state_min_box)
         obs_max_box = np.array(state_max_box)
+        print("######DEBUG######")
+        print(obs_min_box.shape)
+        print(obs_max_box.shape)
         self.observation_space = gym.spaces.Box(obs_min_box, obs_max_box, dtype=np.float32)
+        print(len(self.observation_space.shape))
+        print("######DEBUG######")
         #self.action_space = gym.spaces.Box(low=np.array([-self.vehicle.max_acc, 
         #                        -self.vehicle.max_ang_acc]), 
         #    high=np.array([self.vehicle.max_acc, self.vehicle.max_ang_acc]), dtype=np.float32)
@@ -498,6 +505,11 @@ class ObsEnvironment(gym.Env):
         self.start_dist = self.__goalDist(self.current_state)
 
         observation, _, _ = self.__getObservation(self.current_state)
+
+        #DEBUG
+        img = self.image_obs()[:, :, 0]
+        img = img[:200, :200]
+        observation = img
         
         return observation
     
@@ -688,7 +700,11 @@ class ObsEnvironment(gym.Env):
         center_state = self.vehicle.shift_state(new_state)
         observation, min_beam, lst_indexes = self.__getObservation(new_state)
 
-        #img = self.image_obs()[:, :, 0]
+        #DEBUG
+        img = self.image_obs()[:, :, 0]
+        img = img[:200, :200]
+        observation = img
+
         #print("#####DEBUG#####")
         #print(type(img), img.shape)
         #print((img != 255).sum())
