@@ -12,6 +12,8 @@ RUN pip3 install wandb
 # RUN pwd
 # RUN pip install jsonlib
 RUN pip3 install moviepy imageio
+
+RUN pip install -r /tmp/requirements.txt
 # COPY /EnvLib/ /tmp/EnvLib/
 # COPY /planning/ /tmp/planning/
 # COPY /configs/ /tmp/configs/
