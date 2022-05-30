@@ -52,9 +52,9 @@ def custom_parse_args(argv=None, evaluation=False):
     # cfg.encoder_extra_fc_layers = 0
 
     #cfg.encoder_type = 'mlp'
-    print("###########DEBUG############")
-    print("encoder type setting")
-    print("###########DEBUG############")
+    #print("###########DEBUG############")
+    #print("encoder type setting")
+    #print("###########DEBUG############")
 
 
     cfg.encoder_type = 'conv'
