@@ -13,7 +13,13 @@ RUN pip3 install wandb
 # RUN pip install jsonlib
 RUN pip3 install moviepy imageio
 
+RUN apt update && apt install build-essential ffmpeg libsm6 libxext6 git -y
+
+ADD requirements.txt /tmp/
 RUN pip install -r /tmp/requirements.txt
+
+ARG CACHEBUST=1
+RUN pip install -U pogema && pip freeze | grep pogema
 # COPY /EnvLib/ /tmp/EnvLib/
 # COPY /planning/ /tmp/planning/
 # COPY /configs/ /tmp/configs/

@@ -222,7 +222,7 @@ def register_custom_components():
 import json
 from policy_gradient.curriculum_train import generateDataSet
 
-'''
+
 with open("configs/train_configs.json", 'r') as f:
     train_config = json.load(f)
 
@@ -235,8 +235,8 @@ with open("configs/reward_weight_configs.json", 'r') as f:
 
 with open("configs/car_configs.json", 'r') as f:
     car_config = json.load(f)
-'''
 
+'''
 with open("../configs/train_configs.json", 'r') as f:
     train_config = json.load(f)
 
@@ -249,6 +249,7 @@ with open("../configs/reward_weight_configs.json", 'r') as f:
 
 with open("../configs/car_configs.json", 'r') as f:
     car_config = json.load(f)
+'''
 
 def main():
     register_custom_components()
