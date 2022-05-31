@@ -190,8 +190,10 @@ class ObsEnvironment(gym.Env):
         other_features = len(self.getDiff(State(0, 0, 0, 0, 0)))
         #state_min_box = [-np.inf for _ in range(47)] * self.frame_stack + [-np.inf] * self.frame_stack
         #state_max_box = [np.inf for _ in range(47)] * self.frame_stack + [np.inf] * self.frame_stack                                                                           
-        state_min_box = [[[-np.inf for i in range(200)] for j in range(200)] for _ in range(self.frame_stack)]
-        state_max_box = [[[np.inf for i in range(200)] for j in range(200)] for _ in range(self.frame_stack)]
+        #state_min_box = [[[-np.inf for i in range(200)] for j in range(200)] for _ in range(self.frame_stack)]
+        #state_max_box = [[[np.inf for i in range(200)] for j in range(200)] for _ in range(self.frame_stack)]
+        state_min_box = [[[-np.inf for i in range(50)] for j in range(100)] for _ in range(self.frame_stack * 3)]
+        state_max_box = [[[np.inf for i in range(50)] for j in range(100)] for _ in range(self.frame_stack * 3)]
         obs_min_box = np.array(state_min_box)
         obs_max_box = np.array(state_max_box)
         print("######DEBUG######")
@@ -508,7 +510,9 @@ class ObsEnvironment(gym.Env):
         observation, _, _ = self.__getObservation(self.current_state)
 
         #DEBUG
-        img = self.image_obs()[:, :, 0]
+        #img = self.image_obs()[:, :, 0]
+        self.last_images = []
+        img = self.image_obs(first_obs=True) 
         #img = img[:200, :200]
         observation = img
         
@@ -704,8 +708,9 @@ class ObsEnvironment(gym.Env):
         # observation, min_beam, lst_indexes = self.__getObservation(new_state)
 
         #DEBUG
-        img = self.image_obs()[:, :, 0]
+        #img = self.image_obs()[:, :, 0]
         #img = img[:200, :200]
+        img = self.image_obs()
         observation = img
 
         #print("#####DEBUG#####")
@@ -903,7 +908,71 @@ class ObsEnvironment(gym.Env):
         pass
 
 
-    def image_obs(self, figsize=(2, 2)):
+    def get_dim_image(self, dim, figsize=(0.5, 1)):
+        fig, ax = plt.subplots(figsize=figsize)
+
+        x_delta = self.MAX_DIST_LIDAR
+        y_delta = self.MAX_DIST_LIDAR
+
+        x_min = self.current_state.x - x_delta
+        x_max = self.current_state.x + x_delta
+        #ax.set_xlim(x_min, x_max)
+
+        y_min = self.current_state.y - y_delta
+        y_max = self.current_state.y + y_delta
+        #ax.set_ylim(y_min, y_max)
+        if dim == 1:
+            if len(self.obstacle_segments) > 0:
+                for obstacle in self.obstacle_segments:
+                    self.drawObstacles(obstacle)
+            
+            for dyn_obst in self.dynamic_obstacles:
+                width = self.vehicle.width / 2 + 0.3
+                length = self.vehicle.length / 2 + 0.1
+                center_dyn_obst = self.vehicle.shift_state(dyn_obst)
+                agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
+
+                self.drawObstacles(agentBB)
+                #plt.arrow(dyn_obst.x, dyn_obst.y, 2 * math.cos(dyn_obst.theta), 2 * math.sin(dyn_obst.theta), head_width=0.5, color='magenta')
+        
+        # ax.plot([self.current_state.x, self.goal.x], [self.current_state.y, self.goal.y], '--r')
+
+        if dim == 0:
+            center_state = self.vehicle.shift_state(self.current_state)
+            agentBB = self.getBB(center_state)
+            self.drawObstacles(agentBB, color="-g")
+        if dim == 2:
+            center_goal_state = self.vehicle.shift_state(self.goal)
+            agentBB = self.getBB(center_goal_state)
+            self.drawObstacles(agentBB, color="-r")
+
+        #vehicle_heading = Vec2d(cos(center_state.theta),
+        #         sin(center_state.theta)) * self.vehicle.length / 2
+        #ax.arrow(self.current_state.x, self.current_state.y,
+        #         vehicle_heading.x, vehicle_heading.y, width=0.1, head_width=0.3,
+        #         color='green')
+
+        #goal_heading = Vec2d(cos(center_goal_state.theta),
+        #     sin(center_goal_state.theta)) * self.vehicle.length / 2
+        #ax.arrow(self.goal.x, self.goal.y, goal_heading.x,
+        #         goal_heading.y, width=0.1, head_width=0.3, color='red')
+
+
+        fig.canvas.draw()  # draw the canvas, cache the renderer
+        image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
+        image = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        #image = image.reshape(1600, 2000, 3)
+        # plt.show()
+        # plt.pause(10)
+        plt.close('all')
+        image = image[:, :, 0] + image[:, :, 1] + image[:, :, 2]
+        image[image > 0] = 255
+
+        return image
+
+
+    def image_obs(self, figsize=(0.5, 1), first_obs=False):
+        '''
         fig, ax = plt.subplots(figsize=figsize)
 
         x_delta = self.MAX_DIST_LIDAR
@@ -959,6 +1028,30 @@ class ObsEnvironment(gym.Env):
         # plt.show()
         # plt.pause(10)
         plt.close('all')
+        image = image[:, :, 0] + image[:, :, 1] + image[:, :, 2]
+        image[image > 0] = 255
+        '''
+        dim_images = []
+        for dim in range(3):
+            dim_images.append(
+                np.expand_dims(self.get_dim_image(dim=dim, 
+                                                  figsize=figsize), 0)
+                              )
+        image = np.concatenate(dim_images, axis = 0)           
+        self.last_images.append(image)
+        if first_obs:
+            for _ in range(self.frame_stack - 1):
+                self.last_images.append(image)
+        else:
+            self.last_images.pop(0)
+        #changes: get frames
+        #image = np.expand_dims(image, 0)
+        #for _ in range(self.frame_stack - 1):
+        #    image = np.expand_dims(np.zeros((3, 3)), 0)
+        #    image = np.expand_dims(np.zeros((3, 3)), 0)
+        #image = np.concatenate([image for _ in range(self.frame_stack)], axis = 0)
+        image = np.concatenate(self.last_images, axis = 0)
+
         return image
 
 
