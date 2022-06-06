@@ -11,13 +11,15 @@ from policy_gradient.utlis import *
 #import sys
 #sys.path.insert(0, "../")
 
-#with open("configs/environment_configs.json", 'r') as f:
-#    our_env_config = json.load(f)
-with open("../configs/environment_configs.json", 'r') as f:
+with open("configs/environment_configs.json", 'r') as f:
     our_env_config = json.load(f)
-
-with open("../configs/car_configs.json", 'r') as f:
+with open("configs/car_configs.json", 'r') as f:
     car_configs = json.load(f)
+#with open("../configs/environment_configs.json", 'r') as f:
+#    our_env_config = json.load(f)
+
+#with open("../configs/car_configs.json", 'r') as f:
+#    car_configs = json.load(f)
 
 ANGLE_EPS = float(our_env_config['ANGLE_EPS'])
 SPEED_EPS = float(our_env_config['SPEED_EPS'])
