@@ -13,7 +13,7 @@ from math import cos, sin, tan
 from scipy.spatial import cKDTree
 from planning.utilsPlanning import *
 import time
-import cv2
+import cv2 as cv
 
 
 class State:
@@ -106,6 +106,9 @@ class VehicleConfig:
 
 class ObsEnvironment(gym.Env):
     def __init__(self, full_env_name, config):
+        #DEBUG
+        self.debug_save = False
+
         self.name = full_env_name
         env_config = config["our_env_config"]
         self.reward_config = config["reward_config"]
@@ -509,12 +512,28 @@ class ObsEnvironment(gym.Env):
 
         observation, _, _ = self.__getObservation(self.current_state)
 
-        #DEBUG
-        #img = self.image_obs()[:, :, 0]
+        
         self.last_images = []
         img = self.image_obs(first_obs=True) 
-        #img = img[:200, :200]
         observation = img
+
+        #DEBUG
+        self.img = None
+        self.showed_once = False
+        self.grid_obst = None
+        self.grid_agent = None
+        self.grid_goal = None
+        self.generate_obst_image()
+
+        if not self.showed_once:
+            np.set_printoptions(threshold=np. inf)
+            #print(self.img)
+            self.showed_once = True
+
+        #if self.debug_saved is None:
+        #    np.save("test_image_1", img)
+
+
         
         return observation
     
@@ -906,6 +925,188 @@ class ObsEnvironment(gym.Env):
 
     def close(self):
         pass
+
+    def generate_obst_image(self):
+        #for dyn_obst in self.dynamic_obstacles:
+        #    width = self.vehicle.width / 2 + 0.3
+        #    length = self.vehicle.length / 2 + 0.1
+        #    center_dyn_obst = self.vehicle.shift_state(dyn_obst)
+        #    #agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
+
+        #print("DEBUG Obst env")
+        #for obstacle in self.obstacle_map:
+        #    obs = State(obstacle[0], obstacle[1], obstacle[2], 0, 0)
+        #    width = obstacle[3]
+        #    length = obstacle[4]
+            #print("obst:", (obstacle[0], obstacle[1], obstacle[2]))
+        #    left_x = int(np.floor(obstacle[0]) - length)
+        #    right_x = int(np.ceil(obstacle[0]) + length)
+        #    top_y = int(np.ceil(obstacle[1]) + width)
+        #    bottom_y = int(np.floor(obstacle[0]) - width)
+        #self.img[left_x:right_x, top_y:bottom_y] = 1
+
+
+        assert len(self.obstacle_segments) > 0, "not static env"
+
+        print("DEBUG reset obsts")
+        static_obsts_points = []
+        for obstacle in self.obstacle_segments:
+            static_obsts_points.extend(obstacle)
+
+        x_min, y_min = static_obsts_points[0][0].x, static_obsts_points[0][0].y
+        for point_ in static_obsts_points:
+            #print("DEBUG point:", point_)            
+            if point_[0].x < x_min:
+                x_min = point_[0].x
+            if point_[0].y < y_min:
+                y_min = point_[0].y
+
+        self.normalized_x_init = x_min
+        self.normalized_y_init = y_min
+        self.normalized_static_boxes = []
+        for obstacle in self.obstacle_segments:
+            self.normalized_static_boxes.append([Point(pair_[0].x - self.normalized_x_init, 
+                                         pair_[0].y - self.normalized_y_init) 
+                                    for pair_ in obstacle])
+
+        #DEBUG
+        #for box_ in self.normalized_static_boxes:
+        #    for point_ in box_:
+        #        print("static vertice:", point_.x, point_.y)
+        
+        self.normalized_dynamic_boxes = []
+        for dyn_obst in self.dynamic_obstacles:
+            width = self.vehicle.width / 2 + 0.3
+            length = self.vehicle.length / 2 + 0.1
+            #width = self.vehicle.width / 2
+            #length = self.vehicle.length / 2
+            center_dyn_obst = self.vehicle.shift_state(dyn_obst)
+            agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
+            self.normalized_dynamic_boxes.append([Point(max(0, pair_[0].x - self.normalized_x_init), 
+                                         max(0, pair_[0].y - self.normalized_y_init)) 
+                                    for pair_ in agentBB])
+            
+        #DEBUG    
+        print("len dyn obst:", len(self.normalized_dynamic_boxes))
+        #for box_ in self.normalized_dynamic_boxes:
+        #    for point_ in box_:
+        #        print("dyn vertice:", point_.x, point_.y)
+
+        center_state = self.vehicle.shift_state(self.current_state)
+        agentBB = self.getBB(center_state)
+        self.normalized_agent_box = [Point(max(0, pair_[0].x - self.normalized_x_init), 
+                                         max(0, pair_[0].y - self.normalized_y_init)) 
+                                    for pair_ in agentBB]
+
+        center_goal_state = self.vehicle.shift_state(self.goal)
+        agentBB = self.getBB(center_goal_state)
+        self.normalized_goal_box = [Point(max(0, pair_[0].x - self.normalized_x_init), 
+                                         max(0, pair_[0].y - self.normalized_y_init)) 
+                                    for pair_ in agentBB]
+
+        #DEBUG
+        #for point_ in self.normalized_agent_box:
+        #    print("agent vertice:", point_.x, point_.y)
+        #for point_ in self.normalized_goal_box:
+        #    print("goal vertice:", point_.x, point_.y)
+        grid_resolution = 4
+        if self.grid_obst is None:
+            self.grid_obst = np.zeros((200, 200))
+            self.grid_agent = np.zeros((200, 200))
+            self.grid_goal = np.zeros((200, 200))
+            assert self.grid_obst.shape[0] % grid_resolution == 0 \
+                   and self.grid_obst.shape[1] % grid_resolution == 0, "incorrect grid shape"
+
+        #choice grid indexes
+        self.all_normilized_boxes = self.normalized_static_boxes.copy()
+        self.all_normilized_boxes.extend(self.normalized_dynamic_boxes)
+        self.all_normilized_boxes.append(self.normalized_agent_box)
+        self.all_normilized_boxes.append(self.normalized_goal_box)
+
+        x_shape, y_shape = self.grid_obst.shape
+        print("DEBUG grid shape:", x_shape, y_shape)
+        self.cv_index_boxes = []
+        for box_ in self.all_normilized_boxes:
+            box_cv_indexes = []
+            for i in range(len(box_)):
+                prev_x, prev_y = box_[i - 1].x, box_[i - 1].y
+                curr_x, curr_y = box_[i].x, box_[i].y
+                next_x, next_y = box_[(i + 1) % len(box_)].x, box_[(i + 1) % len(box_)].y
+                x_f, x_ceil = np.modf(curr_x)
+                y_f, y_ceil = np.modf(curr_y)
+                one_x_one = (int(x_ceil * grid_resolution), int(y_ceil * grid_resolution))
+                one_x_one_x_ind = 0
+                one_x_one_y_ind = 0
+                for val in np.linspace(0, 1, grid_resolution + 1)[1:]:
+                    if x_f <= val:
+                        break
+                    one_x_one_x_ind += 1
+                for val in np.linspace(0, 1, grid_resolution + 1)[1:]:
+                    if y_f <= val:
+                        break
+                    one_x_one_y_ind += 1
+
+                if x_f == 0:
+                    if prev_x <= curr_x and next_x <= curr_x:
+                        x_ceil -= 1
+                        one_x_one = (int(x_ceil * grid_resolution), int(y_ceil * grid_resolution))
+                        one_x_one_x_ind = grid_resolution - 1
+
+                if y_f == 0:
+                    if prev_y <= curr_y and next_y <= curr_y:
+                        y_ceil -= 1
+                        one_x_one = (int(x_ceil * grid_resolution), int(y_ceil * grid_resolution))
+                        one_x_one_y_ind = grid_resolution - 1
+
+                index_grid_rev_x = one_x_one[0] + one_x_one_x_ind
+                index_grid_rev_y = one_x_one[1] + one_x_one_y_ind
+                
+                cv_index_x = index_grid_rev_x
+                cv_index_y = y_shape - index_grid_rev_y 
+                cv_index_x, cv_index_y
+                box_cv_indexes.append(Point(cv_index_x, cv_index_y))
+            self.cv_index_boxes.append(box_cv_indexes)
+
+        self.cv_index_goal_box = self.cv_index_boxes.pop(-1)
+        self.cv_index_agent_box = self.cv_index_boxes.pop(-1)
+
+        #DEBUG
+        #print("obst cv indexes")
+        #for box_ in self.cv_index_boxes:
+        #    for point_ in box_:
+        #        print("cv vertice indexes:", point_.x, point_.y)
+        #print("agent cv indexes")
+        #for point_ in self.cv_index_agent_box:
+        #    print("cv vertice indexes:", point_.x, point_.y)
+        #print("goal cv indexes")
+        #for point_ in self.cv_index_goal_box:
+        #    print("cv vertice indexes:", point_.x, point_.y)
+        
+        for cv_box in self.cv_index_boxes:
+            contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
+                                 [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
+            self.grid_obst = cv.fillPoly(self.grid_obst, pts = [contours], color=1)
+
+        print("grid ones obsts:", (self.grid_obst == 1).sum())
+
+        cv_box = self.cv_index_agent_box
+        contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
+                                [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
+        self.grid_agent = cv.fillPoly(self.grid_agent, pts = [contours], color=1)
+
+        cv_box = self.cv_index_goal_box
+        contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
+                                [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
+        self.grid_goal = cv.fillPoly(self.grid_goal, pts = [contours], color=1)
+
+        #print("grid ones agent:", (self.grid_agent == 1).sum())
+        #print("grid ones goal:", (self.grid_goal == 1).sum())
+        #if not self.debug_save:
+            #ind_save = 4
+            #np.savetxt(f"test_images_{ind_save}_obst.csv", self.grid_obst, delimiter="", footer="\n", fmt='% 0d')
+            #np.savetxt(f"test_images_{ind_save}_agent.csv", self.grid_agent, delimiter="", footer="\n", fmt='% 0d')
+            #np.savetxt(f"test_images_{ind_save}_goal.csv", self.grid_goal, delimiter="", footer="\n", fmt='% 0d')
+            #self.debug_save = True
 
 
     def get_dim_image(self, dim, figsize=(0.5, 1)):

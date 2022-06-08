@@ -14,6 +14,7 @@ import wandb
 import yaml
 import numpy as np
 from torch import nn
+sys.path.insert(0, "sample-factory/")
 from sample_factory.algorithms.utils.arguments import arg_parser, parse_args
 from sample_factory.algorithms.appo.model_utils import register_custom_encoder, EncoderBase, get_obs_shape, nonlinearity
 from sample_factory.algorithms.utils.algo_utils import EXTRA_PER_POLICY_SUMMARIES
