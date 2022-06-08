@@ -108,6 +108,7 @@ class ObsEnvironment(gym.Env):
     def __init__(self, full_env_name, config):
         #DEBUG
         self.debug_save = False
+        self.grid_shape = (120, 120)
 
         self.name = full_env_name
         env_config = config["our_env_config"]
@@ -195,8 +196,10 @@ class ObsEnvironment(gym.Env):
         #state_max_box = [np.inf for _ in range(47)] * self.frame_stack + [np.inf] * self.frame_stack                                                                           
         #state_min_box = [[[-np.inf for i in range(200)] for j in range(200)] for _ in range(self.frame_stack)]
         #state_max_box = [[[np.inf for i in range(200)] for j in range(200)] for _ in range(self.frame_stack)]
-        state_min_box = [[[-np.inf for i in range(50)] for j in range(100)] for _ in range(self.frame_stack * 3)]
-        state_max_box = [[[np.inf for i in range(50)] for j in range(100)] for _ in range(self.frame_stack * 3)]
+        #state_min_box = [[[-np.inf for i in range(50)] for j in range(100)] for _ in range(self.frame_stack * 3)]
+        #state_max_box = [[[np.inf for i in range(50)] for j in range(100)] for _ in range(self.frame_stack * 3)]
+        state_min_box = [[[-np.inf for i in range(self.grid_shape[0])] for j in range(self.grid_shape[1])] for _ in range(self.frame_stack * 3)]
+        state_max_box = [[[np.inf for i in range(self.grid_shape[0])] for j in range(self.grid_shape[1])] for _ in range(self.frame_stack * 3)]
         obs_min_box = np.array(state_min_box)
         obs_max_box = np.array(state_max_box)
         print("######DEBUG######")
@@ -432,7 +435,6 @@ class ObsEnvironment(gym.Env):
             if(len(current_task) == 2):
                 current, goal = current_task
             else:
-                #print("DEBUG", current_task) #DEBUG
                 current, goal, dynamic_obstacles = current_task
                 if not rrt:
                     if (np.random.randint(3) > 0):
@@ -510,29 +512,18 @@ class ObsEnvironment(gym.Env):
             self.task = -1 #backward task
         self.start_dist = self.__goalDist(self.current_state)
 
-        observation, _, _ = self.__getObservation(self.current_state)
+        #observation, _, _ = self.__getObservation(self.current_state)
 
         
-        self.last_images = []
-        img = self.image_obs(first_obs=True) 
-        observation = img
+        #img = self.image_obs(first_obs=True) 
+        #observation = img
 
         #DEBUG
-        self.img = None
-        self.showed_once = False
+        self.last_images = []
         self.grid_obst = None
         self.grid_agent = None
         self.grid_goal = None
-        self.generate_obst_image()
-
-        if not self.showed_once:
-            np.set_printoptions(threshold=np. inf)
-            #print(self.img)
-            self.showed_once = True
-
-        #if self.debug_saved is None:
-        #    np.save("test_image_1", img)
-
+        observation = self.generate_obst_image(first_obs=True)
 
         
         return observation
@@ -708,39 +699,34 @@ class ObsEnvironment(gym.Env):
             self.dynamic_obstacles = dynamic_obstacles
             self.dynamic_obstacles_v_s = dynamic_obstacles_v_s
             
-            self.dyn_obstacle_segments = []
-            for dyn_obst in self.dynamic_obstacles:
-                distance = math.hypot(new_state.x - dyn_obst.x, new_state.y - dyn_obst.y)
-                if distance < (self.MAX_DIST_LIDAR + self.vehicle.min_dist_to_check_collision):
-                    width = self.vehicle.width / 2 + 0.3
-                    length = self.vehicle.length / 2 + 0.1
+            #self.dyn_obstacle_segments = []
+            #for dyn_obst in self.dynamic_obstacles:
+            #    distance = math.hypot(new_state.x - dyn_obst.x, new_state.y - dyn_obst.y)
+            #    if distance < (self.MAX_DIST_LIDAR + self.vehicle.min_dist_to_check_collision):
+            #        width = self.vehicle.width / 2 + 0.3
+            #        length = self.vehicle.length / 2 + 0.1
                     #width = self.vehicle.width / 2
                     #length = self.vehicle.length / 2
-                    center_dyn_obst = self.vehicle.shift_state(dyn_obst)
-                    agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
-                    self.dyn_obstacle_segments.append(agentBB)
+           #         center_dyn_obst = self.vehicle.shift_state(dyn_obst)
+           #         agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
+           #         self.dyn_obstacle_segments.append(agentBB)
                     #self.dyn_obstacle_segments.append(self.getBB(center_dyn_obst))
             
         self.current_state = new_state
         self.last_action = action
-        center_state = self.vehicle.shift_state(new_state)
+        #center_state = self.vehicle.shift_state(new_state)
         # observation, min_beam, lst_indexes = self.__getObservation(new_state)
 
         #DEBUG
-        #img = self.image_obs()[:, :, 0]
-        #img = img[:200, :200]
-        img = self.image_obs()
-        observation = img
+        #img = self.image_obs()
+        #observation = img
+        observation = self.generate_obst_image()
+        collision = (self.grid_obst == self.grid_agent).sum() > 0
 
-        #print("#####DEBUG#####")
-        #print(type(img), img.shape)
-        #print((img != 255).sum())
-        #print("#####DEBUG#####")
-
-        min_beam = 0
-        lst_indexes = []
+        #min_beam = 0
+        #lst_indexes = []
         start_time = time.time()
-        collision = self.isCollision(center_state, min_beam, lst_indexes)
+        #collision = self.isCollision(center_state, min_beam, lst_indexes)
         end_time = time.time()
         self.collision_time += (end_time - start_time)
         distanceToGoal = self.__goalDist(new_state)
@@ -803,8 +789,8 @@ class ObsEnvironment(gym.Env):
                 isDone = True
                 if collision:
                     info["Collision"] = True
-            print(f"info: {info}")
-            print(f"isDone: {isDone}")
+            #print(f"info: {info}")
+            #print(f"isDone: {isDone}")
         
         #print("DEBUG:", end=" ") # DEBUG
         #if "Collision" in info: # DEBUG
@@ -926,29 +912,11 @@ class ObsEnvironment(gym.Env):
     def close(self):
         pass
 
-    def generate_obst_image(self):
-        #for dyn_obst in self.dynamic_obstacles:
-        #    width = self.vehicle.width / 2 + 0.3
-        #    length = self.vehicle.length / 2 + 0.1
-        #    center_dyn_obst = self.vehicle.shift_state(dyn_obst)
-        #    #agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
-
-        #print("DEBUG Obst env")
-        #for obstacle in self.obstacle_map:
-        #    obs = State(obstacle[0], obstacle[1], obstacle[2], 0, 0)
-        #    width = obstacle[3]
-        #    length = obstacle[4]
-            #print("obst:", (obstacle[0], obstacle[1], obstacle[2]))
-        #    left_x = int(np.floor(obstacle[0]) - length)
-        #    right_x = int(np.ceil(obstacle[0]) + length)
-        #    top_y = int(np.ceil(obstacle[1]) + width)
-        #    bottom_y = int(np.floor(obstacle[0]) - width)
-        #self.img[left_x:right_x, top_y:bottom_y] = 1
-
-
+    def generate_obst_image(self, first_obs=False):
+        
         assert len(self.obstacle_segments) > 0, "not static env"
 
-        print("DEBUG reset obsts")
+        #print("DEBUG reset obsts")
         static_obsts_points = []
         for obstacle in self.obstacle_segments:
             static_obsts_points.extend(obstacle)
@@ -969,11 +937,6 @@ class ObsEnvironment(gym.Env):
                                          pair_[0].y - self.normalized_y_init) 
                                     for pair_ in obstacle])
 
-        #DEBUG
-        #for box_ in self.normalized_static_boxes:
-        #    for point_ in box_:
-        #        print("static vertice:", point_.x, point_.y)
-        
         self.normalized_dynamic_boxes = []
         for dyn_obst in self.dynamic_obstacles:
             width = self.vehicle.width / 2 + 0.3
@@ -987,7 +950,7 @@ class ObsEnvironment(gym.Env):
                                     for pair_ in agentBB])
             
         #DEBUG    
-        print("len dyn obst:", len(self.normalized_dynamic_boxes))
+        #print("len dyn obst:", len(self.normalized_dynamic_boxes))
         #for box_ in self.normalized_dynamic_boxes:
         #    for point_ in box_:
         #        print("dyn vertice:", point_.x, point_.y)
@@ -1011,9 +974,9 @@ class ObsEnvironment(gym.Env):
         #    print("goal vertice:", point_.x, point_.y)
         grid_resolution = 4
         if self.grid_obst is None:
-            self.grid_obst = np.zeros((200, 200))
-            self.grid_agent = np.zeros((200, 200))
-            self.grid_goal = np.zeros((200, 200))
+            self.grid_obst = np.zeros(self.grid_shape)
+            self.grid_agent = np.zeros(self.grid_shape)
+            self.grid_goal = np.zeros(self.grid_shape)
             assert self.grid_obst.shape[0] % grid_resolution == 0 \
                    and self.grid_obst.shape[1] % grid_resolution == 0, "incorrect grid shape"
 
@@ -1024,7 +987,7 @@ class ObsEnvironment(gym.Env):
         self.all_normilized_boxes.append(self.normalized_goal_box)
 
         x_shape, y_shape = self.grid_obst.shape
-        print("DEBUG grid shape:", x_shape, y_shape)
+        #print("DEBUG grid shape:", x_shape, y_shape)
         self.cv_index_boxes = []
         for box_ in self.all_normilized_boxes:
             box_cv_indexes = []
@@ -1087,7 +1050,7 @@ class ObsEnvironment(gym.Env):
                                  [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
             self.grid_obst = cv.fillPoly(self.grid_obst, pts = [contours], color=1)
 
-        print("grid ones obsts:", (self.grid_obst == 1).sum())
+        #print("grid ones obsts:", (self.grid_obst == 1).sum())
 
         cv_box = self.cv_index_agent_box
         contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
@@ -1107,6 +1070,22 @@ class ObsEnvironment(gym.Env):
             #np.savetxt(f"test_images_{ind_save}_agent.csv", self.grid_agent, delimiter="", footer="\n", fmt='% 0d')
             #np.savetxt(f"test_images_{ind_save}_goal.csv", self.grid_goal, delimiter="", footer="\n", fmt='% 0d')
             #self.debug_save = True
+
+        dim_images = []
+        dim_images.append(np.expand_dims(self.grid_obst, 0))
+        dim_images.append(np.expand_dims(self.grid_agent, 0))
+        dim_images.append(np.expand_dims(self.grid_goal, 0))
+        image = np.concatenate(dim_images, axis = 0)           
+        self.last_images.append(image)
+        if first_obs:
+            assert len(self.last_images) == 1, "incorrect init images"
+            for _ in range(self.frame_stack - 1):
+                self.last_images.append(image)
+        else:
+            self.last_images.pop(0)
+        frames_images = np.concatenate(self.last_images, axis = 0)
+
+        return frames_images
 
 
     def get_dim_image(self, dim, figsize=(0.5, 1)):

@@ -44,8 +44,8 @@ def custom_parse_args(argv=None, evaluation=False):
     cfg = parse_args(argv=argv, evaluation=evaluation, parser=parser)
     cfg.evaluation = evaluation
     # print(f"config {cfg}")
-    # cfg.encoder_type = 'mlp'
-    # cfg.encoder_subtype = 'mlp_mujoco'
+    #cfg.encoder_type = 'mlp'
+    #cfg.encoder_subtype = 'mlp_mujoco'
     # cfg.rollout = 1
     # cfg.cpc_forward_steps = 1
     # cfg.recurrence = 1
@@ -60,6 +60,7 @@ def custom_parse_args(argv=None, evaluation=False):
 
     cfg.encoder_type = 'conv'
     cfg.encoder_subtype = 'convnet_simple'
+
     cfg.encoder_extra_fc_layers = 0
     cfg.train_for_env_steps = 200000000
     # cfg.custom_env_episode_len = 250

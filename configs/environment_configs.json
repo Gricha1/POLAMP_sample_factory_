@@ -23,7 +23,7 @@
     "MAX_DIST_LIDAR": 20,
     "bias_beam": 0,
     "n_beams": 39,
-    "frame_stack": 4,
+    "frame_stack": 3,
     "hard_constraints": 1,
     "medium_constraints": 0,
     "soft_constraints": 0,
