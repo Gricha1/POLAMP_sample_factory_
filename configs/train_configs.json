@@ -5,7 +5,7 @@
     "lambda": 0.96,
     "use_critic": 1,
     "use_gae": 1,
-    "horizon": 300,
+    "horizon": 450,
     "rollout_fragment_length": 1600,
     "num_gpus": 1,
     "num_workers": 5,

@@ -57,7 +57,8 @@ def custom_parse_args(argv=None, evaluation=False):
     #print("encoder type setting")
     #print("###########DEBUG############")
 
-
+    #cfg.encoder_type = 'mlp'
+    #cfg.encoder_subtype = 'mlp_mujoco'
     cfg.encoder_type = 'conv'
     cfg.encoder_subtype = 'convnet_simple'
 
