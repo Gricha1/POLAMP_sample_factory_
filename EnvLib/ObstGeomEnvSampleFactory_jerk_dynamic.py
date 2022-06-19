@@ -51,27 +51,26 @@ class VehicleConfig:
         self.car_radius = math.hypot(self.length / 2., self.width / 2.)
         
     def dynamic(self, state, action):
-        a = action[0]
-        Eps = action[1]
+        j_a = action[0]
+        j_Eps = action[1]
         
         #print("DEBUG actions:", "j_a:", j_a, "j_Eps:", j_Eps)
-        #j_a = j_a * self.jerk
-        #j_Eps = j_Eps * self.jerk
+        j_a = j_a * self.jerk
+        j_Eps = j_Eps * self.jerk
         #DEBUG
         #j_a = 0.5
         #j_Eps = 0
 
         dt = self.delta_t
-        #j_a = np.clip(j_a, -self.jerk, self.jerk)
-        #j_Eps = np.clip(j_Eps, -self.jerk, self.jerk)
-        #self.j_a = j_a
-        #self.j_Eps = j_Eps
-        
+        j_a = np.clip(j_a, -self.jerk, self.jerk)
+        j_Eps = np.clip(j_Eps, -self.jerk, self.jerk)
+        self.j_a = j_a
+        self.j_Eps = j_Eps
 
-        #da = j_a * dt
-        #a = self.a + da
-        #dEps = j_Eps * dt
-        #Eps = self.Eps + dEps
+        da = j_a * dt
+        a = self.a + da
+        dEps = j_Eps * dt
+        Eps = self.Eps + dEps
         if self.use_clip:
             a = np.clip(a, -self.max_acc, self.max_acc)
             Eps = np.clip(Eps, -self.max_ang_acc, self.max_ang_acc)
@@ -854,8 +853,8 @@ class ObsEnvironment(gym.Env):
         Eps = self.vehicle.Eps
         v_s = self.vehicle.v_s
         a = self.vehicle.a
-        #j_a = self.vehicle.j_a
-        #j_Eps = self.vehicle.j_Eps
+        j_a = self.vehicle.j_a
+        j_Eps = self.vehicle.j_Eps
 
         
         #ax.set_title(
@@ -864,8 +863,7 @@ class ObsEnvironment(gym.Env):
         #    steer={delta:.0f}^\\circ, a = {a:.2f}, m/s^2, r={reward:.0f}, \
         #    j_a = {j_a:.2f}, j_Eps = {j_Eps:.2f}$')
         #print("DEBUG", dx, dy, j_a, j_Eps, a, Eps)
-        #ax.set_title(f'$dx={dx:.1f}, dy={dy:.1f}, j_a = {j_a:.2f}, j_Eps = {j_Eps:.2f}, a = {a:.2f}, E={Eps:.2f}, r={reward:.0f}$')
-        ax.set_title(f'$dx={dx:.1f}, dy={dy:.1f}, a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, r={reward:.0f}$')
+        ax.set_title(f'$dx={dx:.1f}, dy={dy:.1f}, j_a = {j_a:.2f}, j_Eps = {j_Eps:.2f}, a = {a:.2f}, E={Eps:.2f}, r={reward:.0f}$')
         
         
         
@@ -885,29 +883,8 @@ class ObsEnvironment(gym.Env):
         pass
 
     def generate_obst_image(self, first_obs=False):
-        '''
-        if len(self.obstacle_segments) == 0:
-            self.obstacle_segments.extend([
-                                    [upper_boundary_center_x, upper_boundary_center_y, 
-                                            0, upper_boundary_width, upper_boundary_height], 
-                                        [bottom_left_boundary_center_x + bottom_left_right_dx_, 
-                                        bottom_left_boundary_center_y, 0, bottom_left_boundary_width,
-                                        bottom_left_boundary_height],
-                                        [bottom_right_boundary_center_x - bottom_left_right_dx_, 
-                                        bottom_right_boundary_center_y, 0, bottom_right_boundary_width, 
-                                        bottom_right_boundary_height], 
-                                        [bottom_down_center_x, bottom_down_center_y, 
-                                        0, bottom_down_width, bottom_down_height]
-                                        ])
-
-            for obstacle in self.obstacle_map:
-                obs = State(obstacle[0], obstacle[1], obstacle[2], 0, 0)
-                width = obstacle[3]
-                length = obstacle[4]
-                self.obstacle_segments.append(self.getBB(obs, width=width, length=length, ego=False))
-        '''
+        
         assert len(self.obstacle_segments) > 0, "not static env"
-
 
         grid_resolution = self.grid_resolution
         #if self.grid_obst is None:
