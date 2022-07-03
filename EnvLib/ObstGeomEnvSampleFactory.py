@@ -15,6 +15,8 @@ from planning.utilsPlanning import *
 import time
 import cv2 as cv
 
+from planning.reedShepp import *
+
 
 class State:
     def __init__(self, x, y, theta, v, steer):
@@ -92,6 +94,7 @@ class VehicleConfig:
         steer = np.clip(steer, -self.max_steer, self.max_steer)
 
         w = (V * np.tan(steer) / self.wheel_base)
+        self.w = w
         dtheta = w * dt
         theta = normalizeAngle(state.theta + dtheta)
 
@@ -115,6 +118,8 @@ class VehicleConfig:
 
 class ObsEnvironment(gym.Env):
     def __init__(self, full_env_name, config):
+        self.RS_reward = True
+        self.adding_features = True
         self.debug_save = False
         self.grid_resolution = 4
         #self.grid_shape = (72, 136)
@@ -371,7 +376,16 @@ class ObsEnvironment(gym.Env):
         theta = state.theta
         v = state.v
         steer = state.steer
-        delta.extend([dx, dy, dtheta, dv, dsteer, theta, v, steer])
+        v_s = self.vehicle.v_s
+        w = self.vehicle.w
+        a = self.vehicle.a
+        Eps = self.vehicle.Eps
+        #delta.extend([dx, dy, dtheta, dv, dsteer, theta, v, steer])
+        #DEBUG adding angular velocity
+        delta.extend([dx, dy, dtheta, dv, dsteer, 
+                     theta, v, steer, 
+                     w, v_s,
+                     a, Eps])
         
         return delta
 
@@ -481,6 +495,7 @@ class ObsEnvironment(gym.Env):
         self.dyn_ang_vel = 0
         self.dyn_ang_acc = 0
         self.vehicle.v_s = 0
+        self.vehicle.w = 0
         self.vehicle.Eps = 0
         self.vehicle.a = 0
         self.vehicle.j_a = 0
@@ -492,7 +507,9 @@ class ObsEnvironment(gym.Env):
             self.first_goal_reached = False
         else:
             self.first_goal_reached = True
-        
+        if self.RS_reward:
+            self.new_RS = None
+
         if fromTrain:
             index = np.random.randint(len(self.lst_keys))
             self.map_key = self.lst_keys[index]
@@ -522,12 +539,16 @@ class ObsEnvironment(gym.Env):
         self.grid_agent = None
         self.grid_goal = None
         observation = self.generate_obst_image(first_obs=True)
+
+        #print("DEBUG origin env obs:", observation.keys())
         
         return observation
     
-    def __reward(self, current_state, new_state, goalReached, collision, overSpeeding, overSteering):
-        previous_delta = self.__goalDist(current_state)
-        new_delta = self.__goalDist(new_state)
+    def __reward(self, current_state, new_state, goalReached, 
+                collision, overSpeeding, overSteering):
+        if not self.RS_reward:
+            previous_delta = self.__goalDist(current_state)
+            new_delta = self.__goalDist(new_state)
         reward = []
 
         reward.append(-1 if collision else 0)
@@ -536,16 +557,34 @@ class ObsEnvironment(gym.Env):
             reward.append(1)
         else:
             reward.append(0)
-
+        #print("before enter:", self.stepCounter)
         if not (self.stepCounter % self.UPDATE_SPARSE):
-            if (new_delta < 0.5):
-                new_delta = 0.5
             reward.append(-1)
-            if self.with_potential:
-                #reward.append((previous_delta - new_delta) / new_delta)
-                reward.append(previous_delta - new_delta)
+            #print("enter:", self.stepCounter)
+
+            #DEBUG changes
+            if self.RS_reward:
+                if self.new_RS is None:
+                    self.prev_RS = reedsSheppSteer(current_state, self.goal)
+                else:
+                    self.prev_RS = (self.new_RS[0].copy(), 
+                                    self.new_RS[1].copy(), 
+                                    self.new_RS[2].copy())
+                self.new_RS = reedsSheppSteer(new_state, self.goal)
+                RS_L_prev = abs(self.prev_RS[2][0]) + \
+                        abs(self.prev_RS[2][1]) + abs(self.prev_RS[2][2])
+                RS_L_new = abs(self.new_RS[2][0]) + \
+                        abs(self.new_RS[2][1]) + abs(self.new_RS[2][2])
+                self.RS_diff = RS_L_prev - RS_L_new
+                reward.append(RS_L_prev - RS_L_new)
             else:
-                reward.append(previous_delta - new_delta)
+                if (new_delta < 0.5):
+                    new_delta = 0.5
+                if self.with_potential:
+                    #reward.append((previous_delta - new_delta) / new_delta)
+                    reward.append(previous_delta - new_delta)
+                else:
+                    reward.append(previous_delta - new_delta)
             reward.append(-1 if overSpeeding else 0)
             reward.append(-1 if overSteering else 0)
             if self.use_acceleration_penalties:
@@ -857,6 +896,16 @@ class ObsEnvironment(gym.Env):
         #j_a = self.vehicle.j_a
         #j_Eps = self.vehicle.j_Eps
 
+        #DEBUG reedSHEPP
+        reeshep_dist = 0
+        if self.RS_reward and not self.new_RS is None:
+            reeshep_dist = abs(self.new_RS[2][0]) + \
+                abs(self.new_RS[2][1]) + abs(self.new_RS[2][2])
+            ax.plot([st[0] for st in self.new_RS[0]], 
+                [st[1] for st in self.new_RS[0]])
+        else:
+            reeshep_dist = 0
+        #print("RS diff:", self.RS_diff)
         
         #ax.set_title(
         #    f'$dx={dx:.1f}, dy={dy:.1f}, E={Eps:.2f}, v_s={v_s:.2f}, \
@@ -865,7 +914,7 @@ class ObsEnvironment(gym.Env):
         #    j_a = {j_a:.2f}, j_Eps = {j_Eps:.2f}$')
         #print("DEBUG", dx, dy, j_a, j_Eps, a, Eps)
         #ax.set_title(f'$dx={dx:.1f}, dy={dy:.1f}, j_a = {j_a:.2f}, j_Eps = {j_Eps:.2f}, a = {a:.2f}, E={Eps:.2f}, r={reward:.0f}$')
-        ax.set_title(f'$dx={dx:.1f}, dy={dy:.1f}, a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, r={reward:.0f}$')
+        ax.set_title(f'$dx={dx:.1f}, dy={dy:.1f}, a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, r={reward:.0f}, RS_d={reeshep_dist:.1f}$')
         
         
         
@@ -885,27 +934,58 @@ class ObsEnvironment(gym.Env):
         pass
 
     def generate_obst_image(self, first_obs=False):
-        '''
+        fake_static_obstacles = False
         if len(self.obstacle_segments) == 0:
-            self.obstacle_segments.extend([
-                                    [upper_boundary_center_x, upper_boundary_center_y, 
-                                            0, upper_boundary_width, upper_boundary_height], 
-                                        [bottom_left_boundary_center_x + bottom_left_right_dx_, 
-                                        bottom_left_boundary_center_y, 0, bottom_left_boundary_width,
-                                        bottom_left_boundary_height],
-                                        [bottom_right_boundary_center_x - bottom_left_right_dx_, 
-                                        bottom_right_boundary_center_y, 0, bottom_right_boundary_width, 
-                                        bottom_right_boundary_height], 
-                                        [bottom_down_center_x, bottom_down_center_y, 
-                                        0, bottom_down_width, bottom_down_height]
-                                        ])
+            fake_static_obstacles = True
+            parking_height = 2.7
+            parking_width = 4.5
+            bottom_left_boundary_width = parking_width / 2
+            bottom_right_boundary_width = parking_width / 2
+            bottom_left_boundary_height = 6 # any value
+            bottom_right_boundary_height = bottom_left_boundary_height
+            bottom_left_boundary_center_x = 5 # any value
+            bottom_right_boundary_center_x = bottom_left_boundary_center_x \
+                        + bottom_left_boundary_height + parking_height \
+                        + bottom_right_boundary_height
+            bottom_left_boundary_center_y = -5.5 # init value
+            bottom_right_boundary_center_y = bottom_left_boundary_center_y
+            bottom_road_edge_y = bottom_left_boundary_center_y + bottom_left_boundary_width
+            #upper_boundary_width = 2 # any value
+            upper_boundary_width = 0.5 # any value
+            upper_boundary_height = 17 
+            bottom_down_width = upper_boundary_width 
+            #bottom_down_height = upper_boundary_height 
+            bottom_down_height = parking_height / 2 
+            upper_boundary_center_x = bottom_left_boundary_center_x \
+                            + bottom_left_boundary_height + parking_height / 2
+            bottom_down_center_x = upper_boundary_center_x
+            bottom_down_center_y = bottom_left_boundary_center_y \
+                        - bottom_left_boundary_width - bottom_down_width \
+                        - 0.2 # dheight
+            road_width_ = 6
+            bottom_left_right_dx_ = 0.25
+            road_center_y = bottom_road_edge_y + road_width_
+            upper_boundary_center_y = road_center_y + road_width_ + upper_boundary_width
+            
+            self.obstacle_map = [
+                [upper_boundary_center_x, upper_boundary_center_y, 
+                        0, upper_boundary_width, upper_boundary_height], 
+                    [bottom_left_boundary_center_x + bottom_left_right_dx_, 
+                    bottom_left_boundary_center_y, 0, bottom_left_boundary_width,
+                    bottom_left_boundary_height],
+                    [bottom_right_boundary_center_x - bottom_left_right_dx_, 
+                    bottom_right_boundary_center_y, 0, bottom_right_boundary_width, 
+                    bottom_right_boundary_height], 
+                    [bottom_down_center_x, bottom_down_center_y, 
+                    0, bottom_down_width, bottom_down_height]
+                                ]
 
             for obstacle in self.obstacle_map:
                 obs = State(obstacle[0], obstacle[1], obstacle[2], 0, 0)
                 width = obstacle[3]
                 length = obstacle[4]
                 self.obstacle_segments.append(self.getBB(obs, width=width, length=length, ego=False))
-        '''
+
         assert len(self.obstacle_segments) > 0, "not static env"
 
 
@@ -1052,11 +1132,15 @@ class ObsEnvironment(gym.Env):
                                 [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
         self.grid_agent = cv.fillPoly(self.grid_agent, pts = [contours], color=1)
 
-        cv_box = self.cv_index_goal_box
-        contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
-                                [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
-        self.grid_goal = cv.fillPoly(self.grid_goal, pts = [contours], color=1)
-        
+        if not self.adding_features:
+            cv_box = self.cv_index_goal_box
+            contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
+                                    [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
+            self.grid_goal = cv.fillPoly(self.grid_goal, pts = [contours], color=1)
+        else:
+            adding_features = self.getDiff(self.current_state)
+            self.grid_goal[0, 0:len(adding_features)] = adding_features
+            
         #DEBUG
         #print("debug agent obs:", self.grid_agent.sum())
         
@@ -1066,7 +1150,8 @@ class ObsEnvironment(gym.Env):
         #    np.savetxt(f"agent_images_{debug_img}.csv", self.grid_agent, delimiter="", fmt='%0d')
         #    np.savetxt(f"goal_images_{debug_img}.csv", self.grid_goal, delimiter="", fmt='%0d')
         #    self.debug_save = False
-        
+        if fake_static_obstacles:
+            self.grid_obst = np.zeros(self.grid_shape)
 
         dim_images = []
         dim_images.append(np.expand_dims(self.grid_obst, 0))
@@ -1081,7 +1166,16 @@ class ObsEnvironment(gym.Env):
         else:
             self.last_images.pop(0)
         frames_images = np.concatenate(self.last_images, axis = 0)
+        
+        if fake_static_obstacles:
+            self.obstacle_map = []
+            self.obstacle_segments = []
 
+        #observation = dict()
+        #observation['obs'] = frames_images
+        #return frames_images
+        #observation['features'] = self.getDiff(self.current_state)
+        #return observation
         return frames_images
 
 

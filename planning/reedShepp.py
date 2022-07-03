@@ -328,8 +328,10 @@ def calc_paths(sx, sy, syaw, gx, gy, gyaw, maxc, step_size):
 
 def reedsSheppSteer(from_state, to_state):
 
-    s_x, s_y, s_yaw = from_state[0], from_state[1], from_state[2]
-    g_x, g_y, g_yaw = to_state[0], to_state[1], to_state[2]
+    #s_x, s_y, s_yaw = from_state[0], from_state[1], from_state[2]
+    #g_x, g_y, g_yaw = to_state[0], to_state[1], to_state[2]
+    s_x, s_y, s_yaw = from_state.x, from_state.y, from_state.theta
+    g_x, g_y, g_yaw = to_state.x, to_state.y, to_state.theta
     
     step_size = 0.1
     curvature = 0.1

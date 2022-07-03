@@ -235,8 +235,8 @@ def generateTasks(config,
         backward_start_x = np.linspace(forward_end_x[0], forward_end_x[1], 5)
         backward_start_y = np.linspace(forward_end_y[0], forward_end_y[1], 5)
 
-    print("debug utils:", "validate forward:", not validate_on_train, 
-         len(forward_start_y) * len(forward_end_x) * len(forward_end_y) * len(forward_start_x))
+    #print("debug utils:", "validate forward:", not validate_on_train, 
+    #     len(forward_start_y) * len(forward_end_x) * len(forward_end_y) * len(forward_start_x))
 
     #DEBUG
     #forward_start_x = [x + 8 for x in forward_start_x]
@@ -374,8 +374,8 @@ def generateTasks(config,
                                                     component_9, component_10]))
 
     if not union: # NOT UPDATED
-        print("debug utils:", "validate backward:", not validate_on_train, 
-         len(backward_start_x) * len(backward_start_y))
+        #print("debug utils:", "validate backward:", not validate_on_train, 
+        # len(backward_start_x) * len(backward_start_y))
         #backward_tasks(4 * 3 = 12 tasks)
         for backward_start_x_ in backward_start_x:
             for backward_start_y_ in backward_start_y:
