@@ -893,6 +893,8 @@ class ObsEnvironment(gym.Env):
 
         dx = self.goal.x - self.current_state.x
         dy = self.goal.y - self.current_state.y
+        ds =  math.hypot(dx, dy)
+        step_count = self.stepCounter
         theta = radToDeg(self.current_state.theta)
         v = self.current_state.v
         delta = radToDeg(self.current_state.steer)
@@ -920,7 +922,8 @@ class ObsEnvironment(gym.Env):
         #    j_a = {j_a:.2f}, j_Eps = {j_Eps:.2f}$')
         #print("DEBUG", dx, dy, j_a, j_Eps, a, Eps)
         #ax.set_title(f'$dx={dx:.1f}, dy={dy:.1f}, j_a = {j_a:.2f}, j_Eps = {j_Eps:.2f}, a = {a:.2f}, E={Eps:.2f}, r={reward:.0f}$')
-        ax.set_title(f'$dx={dx:.1f}, dy={dy:.1f}, a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, r={reward:.0f}, RS_d={reeshep_dist:.1f}$')
+        #ax.set_title(f'$dx={dx:.1f}, dy={dy:.1f}, a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, r={reward:.0f}, RS_d={reeshep_dist:.1f}$')
+        ax.set_title(f'$step={step_count:.0f}, ds={ds:.1f}, d\\theta={theta:.0f}^\\circ, a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, r={reward:.0f}, RS_d={reeshep_dist:.1f}$')
         
         
         
