@@ -55,6 +55,10 @@ class VehicleConfig:
     def dynamic(self, state, action):
         a = action[0]
         Eps = action[1]
+
+        #DEBUG
+        #a = -1
+        #Eps = -1
         
         #print("DEBUG actions:", "j_a:", j_a, "j_Eps:", j_Eps)
         #j_a = j_a * self.jerk
@@ -382,10 +386,11 @@ class ObsEnvironment(gym.Env):
         Eps = self.vehicle.Eps
         #delta.extend([dx, dy, dtheta, dv, dsteer, theta, v, steer])
         #DEBUG adding angular velocity
-        delta.extend([dx, dy, dtheta, dv, dsteer, 
-                     theta, v, steer, 
-                     w, v_s,
-                     a, Eps])
+        delta.extend([dx, dy, dtheta, dv, dsteer, theta, v, steer, v_s])
+        #delta.extend([dx, dy, dtheta, dv, dsteer, 
+        #             theta, v, steer, 
+        #             w, v_s,
+        #             a, Eps])
         
         return delta
 
@@ -627,7 +632,8 @@ class ObsEnvironment(gym.Env):
             reward.append(-abs(self.vehicle.a - self.vehicle.prev_a))
             reward.append(-abs(self.vehicle.Eps - self.vehicle.prev_Eps))
         '''
-
+        #print("rewrad weights:", len(self.reward_weights))
+        #print("adding reward:", len(reward))
         return np.matmul(self.reward_weights, reward)
 
     def isCollision(self, state, min_beam, lst_indexes=[]):
