@@ -143,7 +143,7 @@ def generateTasks(config,
                 parking_height, 
                 buttom_road_edge_y,
                 road_width, second_goal, task_difficulty,
-                dynamic, union,
+                dynamic, union, union_without_forward_task,
                 validate_on_train=False):
                                  
     valTasks = []
@@ -367,13 +367,20 @@ def generateTasks(config,
                                 component_10 = 0    
                                 theta_angle = np.random.choice(samples_theta_eps_ego)   
                                 component_8 = theta_angle  
+                            if union_without_forward_task:
+                                valTasks.append(([component_1, component_2, 
+                                                    component_3, component_4, component_5], 
+                                                    [0, 0, 0, 0, 0]))
+                                valTasks.append(([component_6, component_7, 
+                                                    component_8, component_9, component_10], 
+                                                    [0, 0, 0, 0, 0]))                  
+                            else:
+                                valTasks.append(([component_1, component_2, 
+                                                    component_3, component_4, component_5], 
+                                                    [component_6, component_7, component_8, 
+                                                        component_9, component_10]))
 
-                            valTasks.append(([component_1, component_2, 
-                                                component_3, component_4, component_5], 
-                                                [component_6, component_7, component_8, 
-                                                    component_9, component_10]))
-
-    if not union: # NOT UPDATED
+    if not union: # backward tasks
         #print("debug utils:", "validate backward:", not validate_on_train, 
         # len(backward_start_x) * len(backward_start_y))
         #backward_tasks(4 * 3 = 12 tasks)

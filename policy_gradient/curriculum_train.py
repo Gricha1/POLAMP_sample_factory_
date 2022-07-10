@@ -61,6 +61,10 @@ def generateDataSet(our_env_config, car_config):
         union = True
     else: 
         union = False
+    if our_env_config["union_without_forward_task"]:
+        union_without_forward_task = True
+    else:
+        union_without_forward_task = False
 
     '''
     ------> height
@@ -150,6 +154,7 @@ def generateDataSet(our_env_config, car_config):
                                         bottom_road_edge_y, 
                                         road_width_, second_goal, task_difficulty,
                                         dynamic=dynamic, union=union,
+                                        union_without_forward_task = union_without_forward_task,
                                         validate_on_train=True)
         valTasks["map" + str(index)] = generateTasks(car_config, 
                                         bottom_left_boundary_center_x,
@@ -159,6 +164,7 @@ def generateDataSet(our_env_config, car_config):
                                         bottom_road_edge_y, 
                                         road_width_, second_goal, task_difficulty,
                                         dynamic=dynamic, union=union,
+                                        union_without_forward_task = union_without_forward_task,
                                         validate_on_train=our_env_config["validate_on_train"])
 
         dataSet["empty"] = (maps, trainTask, valTasks)
@@ -243,7 +249,8 @@ def generateDataSet(our_env_config, car_config):
                                             parking_height,
                                             bottom_road_edge_y, 
                                             road_width_, second_goal, task_difficulty,
-                                            dynamic=dynamic, union=union,
+                                            dynamic=dynamic, union=union, 
+                                            union_without_forward_task = union_without_forward_task,
                                             validate_on_train=True)
             valTasks["map" + str(index)] = generateTasks(car_config, 
                                             bottom_left_boundary_center_x,
@@ -253,6 +260,7 @@ def generateDataSet(our_env_config, car_config):
                                             bottom_road_edge_y, 
                                             road_width_, second_goal, task_difficulty,
                                             dynamic=dynamic, union=union,
+                                            union_without_forward_task = union_without_forward_task,
                                             validate_on_train=our_env_config["validate_on_train"])
 
             index += 1

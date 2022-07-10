@@ -202,6 +202,9 @@ class ObsEnvironment(gym.Env):
             self.reward_weights.append(self.reward_config["differ_a"])
             self.reward_weights.append(self.reward_config["differ_Eps"])
         self.unionTask = env_config['union']
+        self.union_without_forward_task = env_config['union_without_forward_task']
+        assert not(not self.unionTask and self.union_without_forward_task), \
+                "incorrect set union task: without forward but not union"
         if self.unionTask:
                 self.second_goal = State(config["second_goal"][0], 
                                 config["second_goal"][1],
@@ -509,7 +512,11 @@ class ObsEnvironment(gym.Env):
         self.vehicle.prev_Eps = 0
         self.collision_time = 0
         if self.unionTask:    
-            self.first_goal_reached = False
+            if self.union_without_forward_task:
+                self.first_goal_reached = False
+                self.goal = self.second_goal
+            else:
+                self.first_goal_reached = False
         else:
             self.first_goal_reached = True
         if self.RS_reward:
