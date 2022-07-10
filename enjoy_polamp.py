@@ -24,7 +24,7 @@ def enjoy(init_cfg, max_num_frames=450, use_wandb=True):
     save_image = False
     save_obs = False
     done_save_img = False
-    debug_forward_move = False
+    debug_forward_move = None
     if use_wandb:
         wandb.init(project='validate_polamp', entity='grisha1')
     while True:
@@ -82,7 +82,11 @@ def enjoy(init_cfg, max_num_frames=450, use_wandb=True):
         # print(f"env.valTasks: {env.valTasks}")
         # print(f"env.maps: {env.maps}")
         start_time = time.time()
+        count_map = 0
         for val_key in env.valTasks:
+            count_map += 1
+            #if count_map < 7:
+            #    continue
             eval_tasks = len(env.valTasks[val_key])
             #total_tasks += eval_tasks
             id_start_forward = 0

@@ -34,7 +34,7 @@
     "use_different_acc_penalty": 0,
     "union": 0,
     "dynamic": 0,
-    "static": 0,
+    "static": 1,
     "easy_map_constraints": 0,
     "medium_map_constraints": 0,
     "hard_map_constraints": 1,

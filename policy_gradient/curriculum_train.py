@@ -175,8 +175,10 @@ def generateDataSet(our_env_config, car_config):
         bottom_left_right_dx = np.linspace(-1, 0.25, 3)
         road_width = np.linspace(2.2, 3, 3)
     elif our_env_config["hard_map_constraints"]:
-        bottom_left_right_dx = np.linspace(0.1, 0.25, 3)
-        road_width = np.linspace(2.6, 6, 3)
+        #bottom_left_right_dx = np.linspace(0.1, 0.25, 3)
+        #road_width = np.linspace(2.6, 6, 3)
+        bottom_left_right_dx = np.linspace(-1, -0.2, 3)
+        road_width = np.linspace(3, 6, 3)
         
     #boundaries
     parking_height = 2.7
