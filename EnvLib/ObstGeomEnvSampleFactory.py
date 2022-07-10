@@ -511,14 +511,6 @@ class ObsEnvironment(gym.Env):
         self.vehicle.prev_a = 0
         self.vehicle.prev_Eps = 0
         self.collision_time = 0
-        if self.unionTask:    
-            if self.union_without_forward_task:
-                self.first_goal_reached = True
-                self.goal = self.second_goal
-            else:
-                self.first_goal_reached = False
-        else:
-            self.first_goal_reached = True
         if self.RS_reward:
             self.new_RS = None
 
@@ -539,6 +531,14 @@ class ObsEnvironment(gym.Env):
             width = obstacle[3]
             length = obstacle[4]
             self.obstacle_segments.append(self.getBB(obs, width=width, length=length, ego=False))
+        if self.unionTask:    
+            if self.union_without_forward_task:
+                self.first_goal_reached = True
+                self.goal = self.second_goal
+            else:
+                self.first_goal_reached = False
+        else:
+            self.first_goal_reached = True
         if self.goal.theta != degToRad(90):
             self.task = 1 #forward task
         else:
