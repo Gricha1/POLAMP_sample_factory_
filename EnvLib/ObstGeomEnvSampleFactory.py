@@ -513,7 +513,7 @@ class ObsEnvironment(gym.Env):
         self.collision_time = 0
         if self.unionTask:    
             if self.union_without_forward_task:
-                self.first_goal_reached = False
+                self.first_goal_reached = True
                 self.goal = self.second_goal
             else:
                 self.first_goal_reached = False
