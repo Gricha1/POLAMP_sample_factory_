@@ -325,9 +325,31 @@ def generateTasks(config,
                             dyn_obs = [dyn_obst_x_, 
                                       dyn_obst_y_, 
                                       dyn_theta, dynamic_speed_, 0]
-                            valTasks.append(([forward_start_x_, forward_start_y_, 0, 0., 0], 
-                                            [forward_end_x_, forward_end_y_, theta_angle, 0, 0], 
-                                            [dyn_obs]))
+                            if union_without_forward_task:
+                                valTasks.append(([forward_start_x_, forward_start_y_, theta_angle, 0., 0], 
+                                                [0, 0, 0, 0, 0], 
+                                                [dyn_obs]))
+                                if forward_dyn_movement:
+                                    dyn_obst_x_second_ = np.random.choice(dyn_obst_x)
+                                    dyn_obst_y_second_ = np.random.choice(dyn_obst_y)
+                                    dynamic_speed_second_ = np.random.choice(dynamic_speed)
+                                else:
+                                    dyn_obst_x_second = np.linspace(forward_end_x_ + 10, forward_end_x_ + 18, 3)
+                                    dynamic_speed_second = [1.5, 1.1, 0.9]
+                                    dyn_obst_x_second_ = np.random.choice(dyn_obst_x_second)
+                                    dyn_obst_y_second_ = np.random.choice(dyn_obst_y)
+                                    dynamic_speed_second_ = np.random.choice(dynamic_speed_second)
+                                dyn_obs_second = [dyn_obst_x_second_, 
+                                      dyn_obst_y_second_, 
+                                      dyn_theta, dynamic_speed_second_, 0]
+                                      
+                                valTasks.append(([forward_end_x_, forward_end_y_, theta_angle, 0., 0], 
+                                                [0, 0, 0, 0, 0], 
+                                                [dyn_obs_second]))
+                            else:
+                                valTasks.append(([forward_start_x_, forward_start_y_, 0, 0., 0], 
+                                                [forward_end_x_, forward_end_y_, theta_angle, 0, 0], 
+                                                [dyn_obs]))
                                             
                         else:        
                             if EASY_TASK:
