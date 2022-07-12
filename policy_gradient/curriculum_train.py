@@ -280,21 +280,8 @@ def trainCurriculum(
                     ):
     
     dataSet, second_goal = generateDataSet(our_env_config, car_config)
-    maps, trainTask, valTasks = dataSet["empty"]
-    #maps_obst, trainTask_obst, valTasks_obst = dataSet["obstacles"]
-    #maps_dyn_obst, trainTask_dyn_obst, valTasks_dyn_obst = dataSet["dyn_obstacles"]
-    
+    maps, trainTask, valTasks = dataSet["empty"] 
     vehicle_config = VehicleConfig(car_config)
-
-    #if not our_env_config["empty"]:
-    #    maps = maps_obst
-    #    trainTask = trainTask_obst
-    #    valTasks = valTasks_obst
-    #if not our_env_config["obstacles"]:
-    #    maps = maps_dyn_obst
-    #    trainTask = trainTask_dyn_obst
-    #    valTasks = valTasks_dyn_obst
-
 
     if our_env_config["union"]:
         environment_config = {

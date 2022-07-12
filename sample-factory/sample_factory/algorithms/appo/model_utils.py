@@ -196,14 +196,25 @@ class ConvEncoder(EncoderBase):
 
         self.encoder_out_size = calc_num_elements(self.enc, obs_shape.obs)
         #custom add
-        self.adding_features_size = 9
+        self.adding_ego_features_size = 9
+        self.adding_dyn_features_size = 4
+        self.dyn_obst_count = 2
         self.adding_features_encode_size = 512
+        self.adding_dyn_features_encode_size = 128
         self.encoder_out_size += self.adding_features_encode_size
+        self.encoder_out_size += self.dyn_obst_count * self.adding_dyn_features_encode_size
         self.encode_adding_model = nn.Sequential(
-                    nn.Linear(self.adding_features_size, 
+                    nn.Linear(self.adding_ego_features_size, 
                         self.adding_features_encode_size),
                     nn.ReLU()
                     )
+        self.encode_dyn_obst_list = [
+                                    nn.Sequential(
+                                    nn.Linear(self.adding_dyn_features_size, 
+                                        self.adding_dyn_features_encode_size),
+                                    nn.ReLU()
+                                    ) for i in range(self.dyn_obst_count)
+                                    ]
         
         log.debug('Encoder output size: %r', self.encoder_out_size)
 
@@ -211,8 +222,11 @@ class ConvEncoder(EncoderBase):
         #print("debug obs:", obs_dict['obs'][:, 2, 0,0:8].shape)
         #print("debug obs:", obs_dict['obs'][:, 2, 0,0:8])
         #print("DEBUG obs:", obs_dict['obs'].shape)
+        dyn_encode = tuple(encode_(obs_dict['obs'][:, 2, ind + 1,0:self.adding_dyn_features_size]) 
+            for ind, encode_ in enumerate(self.encode_dyn_obst_list))
         return torch.cat((self.enc(obs_dict['obs'][:, 0:2, :, :]), 
-                    self.encode_adding_model(obs_dict['obs'][:, 2, 0,0:self.adding_features_size])), 
+                    self.encode_adding_model(obs_dict['obs'][:, 2, 0,0:self.adding_ego_features_size])) + \
+                        dyn_encode, 
                             dim=-1)
         #return self.enc(obs_dict['obs'])
         #print("DEBUG obs:", obs_dict['obs'])

@@ -1,7 +1,7 @@
 {
-    "length": 4.2,
+    "length": 4.140,
     "width": 1.8,
-    "wheel_base": 2.8448,
+    "wheel_base": 2.57,
     "safe_eps": 0.001,
     "max_steer": 28,
     "max_vel": 0.5,

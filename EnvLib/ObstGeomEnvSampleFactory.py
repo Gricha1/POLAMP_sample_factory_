@@ -123,7 +123,8 @@ class VehicleConfig:
 class ObsEnvironment(gym.Env):
     def __init__(self, full_env_name, config):
         self.RS_reward = True
-        self.adding_features = True
+        self.adding_ego_features = True
+        self.adding_dynamic_features = True
         self.debug_save = False
         self.grid_resolution = 4
         #self.grid_shape = (72, 136)
@@ -1148,7 +1149,7 @@ class ObsEnvironment(gym.Env):
                                 [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
         self.grid_agent = cv.fillPoly(self.grid_agent, pts = [contours], color=1)
 
-        if not self.adding_features:
+        if not self.adding_ego_features:
             cv_box = self.cv_index_goal_box
             contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
                                     [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
@@ -1156,6 +1157,13 @@ class ObsEnvironment(gym.Env):
         else:
             adding_features = self.getDiff(self.current_state)
             self.grid_goal[0, 0:len(adding_features)] = adding_features
+            if self.adding_dynamic_features:
+                assert len(self.dynamic_obstacles) > 2, "dynamic objects more than 2"
+                for ind, dyn_state in enumerate(self.dynamic_obstacles):
+                    self.grid_goal[ind + 1, 0:len(dyn_state)] = [dyn_state.x - self.normalized_x_init, 
+                                                                 dyn_state.y - self.normalized_y_init,
+                                                                 dyn_state.theta,
+                                                                 dyn_state.v]
             
         #DEBUG
         #print("debug agent obs:", self.grid_agent.sum())
