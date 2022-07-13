@@ -1158,7 +1158,7 @@ class ObsEnvironment(gym.Env):
             adding_features = self.getDiff(self.current_state)
             self.grid_goal[0, 0:len(adding_features)] = adding_features
             if self.adding_dynamic_features:
-                assert len(self.dynamic_obstacles) > 2, "dynamic objects more than 2"
+                assert len(self.dynamic_obstacles) <= 2, "dynamic objects more than 2"
                 for ind, dyn_state in enumerate(self.dynamic_obstacles):
                     self.grid_goal[ind + 1, 0:len(dyn_state)] = [dyn_state.x - self.normalized_x_init, 
                                                                  dyn_state.y - self.normalized_y_init,

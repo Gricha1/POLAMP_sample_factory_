@@ -222,8 +222,8 @@ class ConvEncoder(EncoderBase):
         #print("debug obs:", obs_dict['obs'][:, 2, 0,0:8].shape)
         #print("debug obs:", obs_dict['obs'][:, 2, 0,0:8])
         #print("DEBUG obs:", obs_dict['obs'].shape)
-        dyn_encode = tuple(encode_(obs_dict['obs'][:, 2, ind + 1,0:self.adding_dyn_features_size]) 
-            for ind, encode_ in enumerate(self.encode_dyn_obst_list))
+        dyn_encode = tuple([encode_(obs_dict['obs'][:, 2, ind + 1,0:self.adding_dyn_features_size]) 
+            for ind, encode_ in enumerate(self.encode_dyn_obst_list)])
         return torch.cat((self.enc(obs_dict['obs'][:, 0:2, :, :]), 
                     self.encode_adding_model(obs_dict['obs'][:, 2, 0,0:self.adding_ego_features_size])) + \
                         dyn_encode, 
