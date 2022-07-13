@@ -208,6 +208,7 @@ class ConvEncoder(EncoderBase):
                         self.adding_features_encode_size),
                     nn.ReLU()
                     )
+        '''
         self.encode_dyn_obst_list = [
                                     nn.Sequential(
                                     nn.Linear(self.adding_dyn_features_size, 
@@ -215,6 +216,18 @@ class ConvEncoder(EncoderBase):
                                     nn.ReLU()
                                     ) for i in range(self.dyn_obst_count)
                                     ]
+        '''
+        self.first_dyn_encode = nn.Sequential(
+                    nn.Linear(self.adding_dyn_features_size, 
+                        self.adding_dyn_features_encode_size),
+                    nn.ReLU()
+                    )
+        self.second_dyn_encode = nn.Sequential(
+                    nn.Linear(self.adding_dyn_features_size, 
+                        self.adding_dyn_features_encode_size),
+                    nn.ReLU()
+                    )
+        
         
         log.debug('Encoder output size: %r', self.encoder_out_size)
 
@@ -222,16 +235,23 @@ class ConvEncoder(EncoderBase):
         #print("debug obs:", obs_dict['obs'][:, 2, 0,0:8].shape)
         #print("debug obs:", obs_dict['obs'][:, 2, 0,0:8])
         #print("DEBUG obs:", obs_dict['obs'].shape)
-        print("DEBUG type 0:", obs_dict['obs'][:, 2, 0,0:self.adding_dyn_features_size].device)
-        print("DEBUG type 1:", obs_dict['obs'][:, 2, 1,0:self.adding_dyn_features_size].device)
-        print("DEBUG type 2:", obs_dict['obs'][:, 2, 2,0:self.adding_dyn_features_size].device)
+        #print("DEBUG type 0:", obs_dict['obs'][:, 2, 0,0:self.adding_dyn_features_size].device)
+        #print("DEBUG type 1:", obs_dict['obs'][:, 2, 1,0:self.adding_dyn_features_size].device)
+        #print("DEBUG type 2:", obs_dict['obs'][:, 2, 2,0:self.adding_dyn_features_size].device)
         
-        dyn_encode = tuple(encode_(obs_dict['obs'][:, 2, ind + 1,0:self.adding_dyn_features_size]) 
-            for ind, encode_ in enumerate(self.encode_dyn_obst_list))
+        #dyn_encode = tuple(encode_(obs_dict['obs'][:, 2, ind + 1,0:self.adding_dyn_features_size]) 
+        #    for ind, encode_ in enumerate(self.encode_dyn_obst_list))
+        '''
         return torch.cat((self.enc(obs_dict['obs'][:, 0:2, :, :]), 
                     self.encode_adding_model(obs_dict['obs'][:, 2, 0,0:self.adding_ego_features_size])) + \
                         dyn_encode, 
                             dim=-1)
+        '''
+        return torch.cat((self.enc(obs_dict['obs'][:, 0:2, :, :]), 
+                    self.encode_adding_model(obs_dict['obs'][:, 2, 0,0:self.adding_ego_features_size]),
+                    self.first_dyn_encode(obs_dict['obs'][:, 2, 1,0:self.adding_ego_features_size]),
+                    self.second_dyn_encode(obs_dict['obs'][:, 2, 2,0:self.adding_ego_features_size]))
+                    dim=-1)
         #return self.enc(obs_dict['obs'])
         #print("DEBUG obs:", obs_dict['obs'])
         #print("DEBUG features:", obs_dict['features'])
