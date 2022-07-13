@@ -249,8 +249,8 @@ class ConvEncoder(EncoderBase):
         '''
         return torch.cat((self.enc(obs_dict['obs'][:, 0:2, :, :]), 
                     self.encode_adding_model(obs_dict['obs'][:, 2, 0,0:self.adding_ego_features_size]),
-                    self.first_dyn_encode(obs_dict['obs'][:, 2, 1,0:self.adding_ego_features_size]),
-                    self.second_dyn_encode(obs_dict['obs'][:, 2, 2,0:self.adding_ego_features_size])),
+                    self.first_dyn_encode(obs_dict['obs'][:, 2, 1,0:self.adding_dyn_features_size]),
+                    self.second_dyn_encode(obs_dict['obs'][:, 2, 2,0:self.adding_dyn_features_size])),
                     dim=-1)
         #return self.enc(obs_dict['obs'])
         #print("DEBUG obs:", obs_dict['obs'])
