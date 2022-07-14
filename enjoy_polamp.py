@@ -85,8 +85,8 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
         start_time = time.time()
         count_map = 0
         for val_key in env.valTasks:
-            if np.random.random() > 0.3:
-                continue
+            #if np.random.random() > 0.3:
+            #    continue
             count_map += 1
             #if count_map < 7:
             #    continue
@@ -110,9 +110,9 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
             #        "len:", len(env.valTasks[val_key]))
             #for id in range(eval_tasks):
             for id in range(id_start, id_end):
-                if np.random.random() > 0.2:
-                    continue
-                print("DEBUG")
+                #if np.random.random() > 0.2:
+                #    continue
+                #print("DEBUG")
                 #print("debug task 1", env.valTasks[val_key][id][0])
                 #print("debug task 2", env.valTasks[val_key][id][1])
                 obs = env.reset(idx=id, fromTrain=False, val_key=val_key)

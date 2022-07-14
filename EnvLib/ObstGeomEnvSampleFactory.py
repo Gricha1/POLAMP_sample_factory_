@@ -109,6 +109,21 @@ class VehicleConfig:
 
         new_state = State(x, y, theta, V, steer)
 
+        self.prev_gear = self.gear
+        if self.gear is None:
+            if V > 0:
+                self.gear = True
+            elif V < 0:
+                self.gear = False
+        else:
+            if self.gear:
+                if V < 0:
+                    self.gear = False
+            else:
+                if V > 0:
+                    self.gear = True
+
+            
         return new_state, overSpeeding, overSteering
     
     
@@ -122,6 +137,7 @@ class VehicleConfig:
 
 class ObsEnvironment(gym.Env):
     def __init__(self, full_env_name, config):
+        self.gear_switch_penalty = True
         self.RS_reward = True
         self.adding_ego_features = True
         self.adding_dynamic_features = True
@@ -185,14 +201,14 @@ class ObsEnvironment(gym.Env):
         self.dyn_acc = 0
         self.dyn_ang_vel = 0
         self.collision_time = 0
-        #self.angle_space = np.linspace(-self.view_angle, self.view_angle, self.n_beams)
         self.reward_weights = [
             self.reward_config["collision"],
             self.reward_config["goal"],
             self.reward_config["timeStep"],
             self.reward_config["distance"],
             self.reward_config["overSpeeding"],
-            self.reward_config["overSteering"]
+            self.reward_config["overSteering"],
+            self.reward_config["gearSwitchPenalty"]
         ]
         if self.use_acceleration_penalties:
             self.reward_weights.append(self.reward_config["Eps_penalty"])
@@ -515,6 +531,9 @@ class ObsEnvironment(gym.Env):
         if self.RS_reward:
             self.new_RS = None
 
+        self.vehicle.gear = None
+        self.vehicle.prev_gear = None
+
         if fromTrain:
             index = np.random.randint(len(self.lst_keys))
             self.map_key = self.lst_keys[index]
@@ -546,14 +565,11 @@ class ObsEnvironment(gym.Env):
             self.task = -1 #backward task
         self.start_dist = self.__goalDist(self.current_state)
 
-        #DEBUG
         self.last_images = []
         self.grid_obst = None
         self.grid_agent = None
         self.grid_goal = None
         observation = self.generate_obst_image(first_obs=True)
-
-        #print("DEBUG origin env obs:", observation.keys())
         
         return observation
     
@@ -570,12 +586,9 @@ class ObsEnvironment(gym.Env):
             reward.append(1)
         else:
             reward.append(0)
-        #print("before enter:", self.stepCounter)
         if not (self.stepCounter % self.UPDATE_SPARSE):
             reward.append(-1)
-            #print("enter:", self.stepCounter)
 
-            #DEBUG changes
             if self.RS_reward:
                 if self.new_RS is None:
                     self.prev_RS = reedsSheppSteer(current_state, self.goal)
@@ -640,8 +653,14 @@ class ObsEnvironment(gym.Env):
             reward.append(-abs(self.vehicle.a - self.vehicle.prev_a))
             reward.append(-abs(self.vehicle.Eps - self.vehicle.prev_Eps))
         '''
-        #print("rewrad weights:", len(self.reward_weights))
-        #print("adding reward:", len(reward))
+        if self.gear_switch_penalty:
+            if self.vehicle.prev_gear != self.vehicle.gear:
+                reward.append(-1)
+            else:
+                reward.append(0)
+        else:
+            reward.append(0)
+
         return np.matmul(self.reward_weights, reward)
 
     def isCollision(self, state, min_beam, lst_indexes=[]):
@@ -796,12 +815,9 @@ class ObsEnvironment(gym.Env):
         self.stepCounter += 1
         if goalReached or collision or (self._max_episode_steps == self.stepCounter):
             if self.unionTask:
-                if goalReached:
-                    #print("goad benug")                
+                if goalReached:  
                     if not self.first_goal_reached:
-                        #print("DEBUG")
                         self.first_goal_reached = True
-                        #self.goal = State(13, -5.5, degToRad(90), 0, 0)
                         self.goal = self.second_goal
                         self.start_dist = self.__goalDist(new_state)
                         self.task = -1
@@ -912,7 +928,6 @@ class ObsEnvironment(gym.Env):
         #j_a = self.vehicle.j_a
         #j_Eps = self.vehicle.j_Eps
 
-        #DEBUG reedSHEPP
         reeshep_dist = 0
         if self.RS_reward and not self.new_RS is None:
             reeshep_dist = abs(self.new_RS[2][0]) + \
@@ -931,7 +946,7 @@ class ObsEnvironment(gym.Env):
         #print("DEBUG", dx, dy, j_a, j_Eps, a, Eps)
         #ax.set_title(f'$dx={dx:.1f}, dy={dy:.1f}, j_a = {j_a:.2f}, j_Eps = {j_Eps:.2f}, a = {a:.2f}, E={Eps:.2f}, r={reward:.0f}$')
         #ax.set_title(f'$dx={dx:.1f}, dy={dy:.1f}, a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, r={reward:.0f}, RS_d={reeshep_dist:.1f}$')
-        ax.set_title(f'$step={step_count:.0f}, ds={ds:.1f}, d\\theta={theta:.0f}^\\circ, a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, r={reward:.0f}, RS_d={reeshep_dist:.1f}$')
+        ax.set_title(f'$step={step_count:.0f}, gear={self.vehicle.gear}, ds={ds:.1f}, \\theta={theta:.0f}^\\circ, a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, r={reward:.0f}, RS_d={reeshep_dist:.1f}$')
         
         
         
@@ -1165,8 +1180,6 @@ class ObsEnvironment(gym.Env):
                                                                  dyn_state.theta,
                                                                  dyn_state.v]
             
-        #DEBUG
-        #print("debug agent obs:", self.grid_agent.sum())
         
         #debug_img = 11
         #if self.debug_save:
