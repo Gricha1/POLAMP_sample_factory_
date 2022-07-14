@@ -6,5 +6,5 @@
     "reverse": 0.3,
     "overSpeeding": 0.5,
     "overSteering": 0.5,
-    "gearSwitchPenalty": 1
+    "gearSwitchPenalty": 0.5
 } 
