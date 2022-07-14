@@ -24,7 +24,7 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
     save_image = True
     save_obs = False
     done_save_img = False
-    debug_forward_move = None
+    debug_forward_move = False
     #DEBUG have to set assert on union tasks
     if use_wandb:
         wandb.init(project='validate_polamp', entity='grisha1')
@@ -112,7 +112,7 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
             for id in range(id_start, id_end):
                 if np.random.random() > 0.2:
                     continue
-                #print("DEBUG")
+                print("DEBUG")
                 #print("debug task 1", env.valTasks[val_key][id][0])
                 #print("debug task 2", env.valTasks[val_key][id][1])
                 obs = env.reset(idx=id, fromTrain=False, val_key=val_key)
