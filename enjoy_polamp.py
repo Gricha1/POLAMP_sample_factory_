@@ -24,6 +24,7 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
     save_image = False
     save_obs = False
     done_save_img = False
+    debug_not_done_save_img = True
     debug_forward_move = None
     #DEBUG have to set assert on union tasks
     if use_wandb:
@@ -110,7 +111,18 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
             #print("type task:", type(env.valTasks[val_key]), 
             #        "len:", len(env.valTasks[val_key]))
             #for id in range(eval_tasks):
-            for id in range(id_start, id_end):
+            #for id in range(id_start, id_end):
+            id = id_start
+            saved_last_image = False
+            while id < id_end:
+                if debug_not_done_save_img:
+                    save_image = False
+                    if not episode_done and not saved_last_image:
+                        id = id - 1
+                        save_image = True
+                        saved_last_image = True
+                    saved_last_image = False
+                
                 #if np.random.random() > 0.2:
                 #    continue
                 #print("DEBUG")
@@ -208,7 +220,7 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
                             #         image = env.render()
                             #         images.append(image)
                                 # time.sleep(0.05)
-
+                            episode_done = False
                             if all(finished_episode):
                                 print(f"finished_episode: {finished_episode}")
                                 print(f"infos: {infos}")
@@ -221,6 +233,7 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
                                     print("$$ SoftEps $$")
                                 elif num_frames != max_num_frames:
                                     successed_tasks += 1
+                                    episode_done = True
                                 else:
                                     max_steps_tasks += 1
                                 finished_episode = [False] * env.num_agents
@@ -269,6 +282,7 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
                 # if use_wandb and (id == 5 or id ==7):
                 #     wandb.log({f"task_{key}_{id}": wandb.Video(images, fps=10, format="gif")})
                 # print("##### Ending #####")
+                id += 1
         
         end_time = time.time()
         print("final time: ", end_time - start_time)
