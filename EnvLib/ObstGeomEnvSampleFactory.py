@@ -1159,7 +1159,7 @@ class ObsEnvironment(gym.Env):
                                  [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
             self.grid_obst = cv.fillPoly(self.grid_obst, pts = [contours], color=1)
 
-        print("DEBUG count dynamic:", len(self.normalized_dynamic_boxes))
+        print("DEBUG count static:", len(self.normalized_static_boxes))
 
         cv_box = self.cv_index_agent_box
         contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
