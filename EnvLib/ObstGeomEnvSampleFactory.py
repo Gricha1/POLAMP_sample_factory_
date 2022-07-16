@@ -946,7 +946,7 @@ class ObsEnvironment(gym.Env):
         #print("DEBUG", dx, dy, j_a, j_Eps, a, Eps)
         #ax.set_title(f'$dx={dx:.1f}, dy={dy:.1f}, j_a = {j_a:.2f}, j_Eps = {j_Eps:.2f}, a = {a:.2f}, E={Eps:.2f}, r={reward:.0f}$')
         #ax.set_title(f'$dx={dx:.1f}, dy={dy:.1f}, a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, r={reward:.0f}, RS_d={reeshep_dist:.1f}$')
-        ax.set_title(f'$step = {step_count:.0f}, ds = {ds:.1f}, gear = {self.vehicle.gear}$ \n $\\theta = {theta:.0f}^\\circ, a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, r={reward:.0f}, RS_d={reeshep_dist:.1f}$')
+        ax.set_title(f'$step = {step_count:.0f}, ds = {ds:.1f}, gear = {self.vehicle.gear}, steer={delta:.0f}$ \n $\\theta = {theta:.0f}^\\circ, a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, r={reward:.0f}, RS_d={reeshep_dist:.1f}$')
         
         
         

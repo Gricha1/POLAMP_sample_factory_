@@ -21,11 +21,12 @@ from sample_factory.utils.utils import log, AttrDict
 
 
 def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
-    save_image = False
-    save_obs = False
+    save_image = True
+    save_obs = True
     done_save_img = False
-    debug_not_done_save_img = True
+    debug_not_done_save_img = False
     debug_forward_move = None
+    debug_dynamic = False
     #DEBUG have to set assert on union tasks
     if use_wandb:
         wandb.init(project='validate_polamp', entity='grisha1')
@@ -114,14 +115,18 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
             #for id in range(id_start, id_end):
             id = id_start
             saved_last_image = False
+            episode_done = True
             while id < id_end:
                 if debug_not_done_save_img:
                     save_image = False
+                    save_obs = False
                     if not episode_done and not saved_last_image:
                         id = id - 1
                         save_image = True
+                        save_obs = True
                         saved_last_image = True
-                    saved_last_image = False
+                    else:
+                        saved_last_image = False
                 
                 #if np.random.random() > 0.2:
                 #    continue
@@ -186,6 +191,10 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
                             obs, rew, done, infos = env.step(actions)
                             # print(f"infos: {infos}")
                             # print(f"done: {done}")
+                            if debug_dynamic:
+                                #print("dyn vector:", obs[0].shape)
+                                print("1 dyn:", obs[0][2, 1, 0:4])
+                                print("2 dyn:", obs[0][2, 2, 0:4])
                             if save_image:
                                 #images.append(env.image_obs(validate=True))
                                 #print("DEBUG rew", rew)
