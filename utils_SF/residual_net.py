@@ -52,7 +52,7 @@ class ResnetEncoder(EncoderBase):
         log.debug('Num input channels: %d', input_ch)
 
         #resnet_conf = [[settings.pogema_encoder_num_filters, settings.pogema_encoder_num_res_blocks]]
-        resnet_conf = [[64, 3]]
+        #resnet_conf = [[64, 3]]
 
         self.inchannel = input_ch
         self.conv1 = nn.Sequential(
@@ -62,9 +62,12 @@ class ResnetEncoder(EncoderBase):
         )
         layers = []
         self.layer1 = self.make_layer(ResidualBlock, 64,  2, stride=1)
-        self.layer2 = self.make_layer(ResidualBlock, 128, 2, stride=2)
-        self.layer3 = self.make_layer(ResidualBlock, 256, 2, stride=2)
-        self.layer4 = self.make_layer(ResidualBlock, 512, 2, stride=2)
+        #self.layer2 = self.make_layer(ResidualBlock, 128, 2, stride=2)
+        #self.layer3 = self.make_layer(ResidualBlock, 256, 2, stride=2)
+        #self.layer4 = self.make_layer(ResidualBlock, 512, 2, stride=2)
+        self.layer2 = []
+        self.layer3 = []
+        self.layer4 = []
         for layer_ in [self.layer1, self.layer2, self.layer3, self.layer4]:
             layers.extend(layer_)
         layers.append(nn.AvgPool2d(4))
