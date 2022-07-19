@@ -726,7 +726,8 @@ class ObsEnvironment(gym.Env):
         # print(f"action: {action}")
         info = {}
         isDone = False
-        new_state, overSpeeding, overSteering = self.vehicle.dynamic(self.current_state, action)
+        new_state, overSpeeding, overSteering = \
+                self.vehicle.dynamic(self.current_state, action)
         
         if len(self.dynamic_obstacles) > 0:
             dynamic_obstacles = []
@@ -763,11 +764,13 @@ class ObsEnvironment(gym.Env):
 
         #collision
         start_time = time.time()
-        temp_grid_agent = np.full(self.grid_agent.shape, 2)
-        temp_grid_obst = np.full(self.grid_static_obst.shape, 0)
-        temp_grid_agent[self.grid_agent == 1] = 1
-        temp_grid_obst[self.grid_static_obst > 0] = 1
-        collision = (temp_grid_obst == temp_grid_agent).sum() > 0
+        #temp_grid_agent = np.full(self.grid_agent.shape, 2)
+        #temp_grid_obst = np.full(self.grid_static_obst.shape, 0)
+        temp_grid_obst = self.grid_static_obst + self.grid_dynamic_obst
+        #temp_grid_agent[self.grid_agent == 1] = 1
+        #temp_grid_obst[self.grid_static_obst > 0] = 1
+        #collision = (temp_grid_obst == temp_grid_agent).sum() > 0
+        collision = temp_grid_obst[self.grid_agent == 1].sum() > 0
         end_time = time.time()
 
         self.collision_time += (end_time - start_time)
