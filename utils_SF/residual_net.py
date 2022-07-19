@@ -56,10 +56,11 @@ class ResnetEncoder(EncoderBase):
 
         self.inchannel = input_ch
         self.conv1 = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.Conv2d(input_ch, 64, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(),
         )
+        #layers = [self.conv1]
         layers = []
         self.layer1 = self.make_layer(ResidualBlock, 64,  2, stride=1)
         #self.layer2 = self.make_layer(ResidualBlock, 128, 2, stride=2)
@@ -72,8 +73,15 @@ class ResnetEncoder(EncoderBase):
             layers.extend(layer_)
         layers.append(nn.AvgPool2d(4))
         self.conv_head = nn.Sequential(*layers)
-        self.conv_head_out_size = calc_num_elements(self.conv_head, obs_shape.obs)
+        self.convLayersOutSize = calc_num_elements(self.conv_head, obs_shape.obs)
+        self.conv_head_out_size = 1024
         log.debug('Convolutional layer output size: %r', self.conv_head_out_size)
+
+        self.fcForResultEmbeding = nn.Sequential(
+                    nn.Linear(self.convLayersOutSize, 
+                              1024),
+                    nn.ReLU()
+                    )
     
         self.init_fc_blocks(self.conv_head_out_size)
 
@@ -100,10 +108,15 @@ class ResnetEncoder(EncoderBase):
         #return out
         if isinstance(x, dict):
             x = x['obs']
-        #print("DEBUG x:", x.shape)
+        #print("DEBUG first x:", x.shape)
         x = x[:, :2, :, :]
+        #print("DEBUG second x:", x.shape)
         x = self.conv_head(x)
+        #print("DEBUG third x:", x.shape)
         #x = F.avg_pool2d(x, 4)
-        x = x.contiguous().view(-1, self.conv_head_out_size)
-        x = self.forward_fc_blocks(x)
+        #x = x.contiguous().view(-1, self.conv_head_out_size)
+        x = x.contiguous().view(-1, self.convLayersOutSize)
+        #x = self.forward_fc_blocks(x)
+        x = self.fcForResultEmbeding(x)
+        #print("DEBUG x shape:", x.shape)
         return x

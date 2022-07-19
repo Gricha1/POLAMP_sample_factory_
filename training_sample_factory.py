@@ -194,7 +194,7 @@ def add_extra_params_func(env, parser):
 def override_default_params_func(env, parser):
     parser.set_defaults(
         encoder_custom='custom_env_encoder',
-        hidden_size=128,
+        hidden_size=1024,
     )
 
 def polamp_extra_summaries(policy_id, policy_avg_stats, env_steps, summary_writer, cfg):
