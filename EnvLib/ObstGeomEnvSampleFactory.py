@@ -142,6 +142,7 @@ class ObsEnvironment(gym.Env):
         self.adding_ego_features = True
         self.adding_dynamic_features = True
         self.debug_save = False
+        self.gridCount = 4
         self.grid_resolution = 4
         self.grid_shape = (120, 120)
         #self.grid_resolution = 10
@@ -161,7 +162,6 @@ class ObsEnvironment(gym.Env):
         self.last_observations = []
         self.hardGoalReached = False
         self.stepCounter = 0
-        #self.vehicle = config['vehicle_config']
         self.vehicle = VehicleConfig(config['car_config'])
         self.trainTasks = config['tasks']
         self.valTasks = config['valTasks']
@@ -233,34 +233,16 @@ class ObsEnvironment(gym.Env):
             + self.medium_constraints \
             + self.soft_constraints == 1, "custom assert: only one constraint is acceptable"
 
-        #other_features = len(self.getDiff(State(0, 0, 0, 0, 0)))
-        #state_min_box = [-np.inf for _ in range(47)] * self.frame_stack + [-np.inf] * self.frame_stack
-        #state_max_box = [np.inf for _ in range(47)] * self.frame_stack + [np.inf] * self.frame_stack                                                                           
-        #state_min_box = [[[-np.inf for i in range(200)] for j in range(200)] for _ in range(self.frame_stack)]
-        #state_max_box = [[[np.inf for i in range(200)] for j in range(200)] for _ in range(self.frame_stack)]
-        #state_min_box = [[[-np.inf for i in range(50)] for j in range(100)] for _ in range(self.frame_stack * 3)]
-        #state_max_box = [[[np.inf for i in range(50)] for j in range(100)] for _ in range(self.frame_stack * 3)]
-        state_min_box = [[[-np.inf for j in range(self.grid_shape[1])] for i in range(self.grid_shape[0])] for _ in range(self.frame_stack * 3)]
-        state_max_box = [[[np.inf for j in range(self.grid_shape[1])] for i in range(self.grid_shape[0])] for _ in range(self.frame_stack * 3)]
+        state_min_box = [[[-np.inf for j in range(self.grid_shape[1])] 
+                for i in range(self.grid_shape[0])] for _ in range(self.gridCount)]
+        state_max_box = [[[np.inf for j in range(self.grid_shape[1])] 
+                for i in range(self.grid_shape[0])] for _ in range(self.gridCount)]
         obs_min_box = np.array(state_min_box)
         obs_max_box = np.array(state_max_box)
-        #print("######DEBUG######")
-        #print(obs_min_box.shape)
-        #print(obs_max_box.shape)
-        self.observation_space = gym.spaces.Box(obs_min_box, obs_max_box, dtype=np.float32)
-        #print(len(self.observation_space.shape))
-        #print("######DEBUG######")
-        #self.action_space = gym.spaces.Box(low=np.array([-self.vehicle.max_acc, 
-        #                        -self.vehicle.max_ang_acc]), 
-        #    high=np.array([self.vehicle.max_acc, self.vehicle.max_ang_acc]), dtype=np.float32)
-        #self.action_space = gym.spaces.Box(low=np.array([-self.vehicle.jerk, 
-        #                        -self.vehicle.jerk]), 
-        #    high=np.array([self.vehicle.jerk, self.vehicle.jerk]), dtype=np.float32)
+        self.observation_space = gym.spaces.Box(obs_min_box, obs_max_box, 
+                                            dtype=np.float32)
         self.action_space = gym.spaces.Box(low=np.array([-1, -1]), 
                             high=np.array([1, 1]), dtype=np.float32)
-        #self.action_space = gym.spaces.Box(low=np.array([-self.vehicle["jerk"], 
-        #                        -self.vehicle["jerk"]]), 
-        #    high=np.array([self.vehicle["jerk"], self.vehicle["jerk"]]), dtype=np.float32)
         self.lst_keys = list(self.maps.keys())
         index = np.random.randint(len(self.lst_keys))
         self.map_key = self.lst_keys[index]
@@ -286,12 +268,14 @@ class ObsEnvironment(gym.Env):
             vertices.append(Point(new_x + x, new_y + y))
             
         segments = [(vertices[(i) % len(vertices)], \
-                    vertices[(i + 1) % len(vertices)]) for i in range(len(vertices))]
+                    vertices[(i + 1) % len(vertices)]) 
+                    for i in range(len(vertices))]
         
         return segments
 
 
-    def __sendBeam(self, state, angle, nearestObstacles=None, with_angles=False, lst_indexes=[]):
+    def __sendBeam(self, state, angle, nearestObstacles=None, 
+                                with_angles=False, lst_indexes=[]):
         if nearestObstacles is None:
             nearestObstacles = list(self.obstacle_segments)
             nearestObstacles.extend(self.dyn_obstacle_segments)
@@ -567,9 +551,9 @@ class ObsEnvironment(gym.Env):
         self.start_dist = self.__goalDist(self.current_state)
 
         self.last_images = []
-        self.grid_obst = None
+        self.grid_static_obst = None
         self.grid_agent = None
-        self.grid_goal = None
+        self.grid_with_adding_features = None
         observation = self.generate_obst_image(first_obs=True)
         
         return observation
@@ -780,9 +764,9 @@ class ObsEnvironment(gym.Env):
         #collision
         start_time = time.time()
         temp_grid_agent = np.full(self.grid_agent.shape, 2)
-        temp_grid_obst = np.full(self.grid_obst.shape, 0)
+        temp_grid_obst = np.full(self.grid_static_obst.shape, 0)
         temp_grid_agent[self.grid_agent == 1] = 1
-        temp_grid_obst[self.grid_obst > 0] = 1
+        temp_grid_obst[self.grid_static_obst > 0] = 1
         collision = (temp_grid_obst == temp_grid_agent).sum() > 0
         end_time = time.time()
 
@@ -1028,9 +1012,10 @@ class ObsEnvironment(gym.Env):
 
         grid_resolution = self.grid_resolution
         #if self.grid_obst is None:
-        self.grid_obst = np.zeros(self.grid_shape)
+        self.grid_static_obst = np.zeros(self.grid_shape)
+        self.grid_dynamic_obst = np.zeros(self.grid_shape)
         self.grid_agent = np.zeros(self.grid_shape)
-        self.grid_goal = np.zeros(self.grid_shape)
+        self.grid_with_adding_features = np.zeros(self.grid_shape)
         
         #find static init point
         if first_obs:
@@ -1080,15 +1065,13 @@ class ObsEnvironment(gym.Env):
                                         max(0, pair_[0].y - self.normalized_y_init)) 
                                     for pair_ in agentBB]
 
-        
         #choice grid indexes
         self.all_normilized_boxes = self.normalized_static_boxes.copy()
         self.all_normilized_boxes.extend(self.normalized_dynamic_boxes)
         self.all_normilized_boxes.append(self.normalized_agent_box)
         self.all_normilized_boxes.append(self.normalized_goal_box)
 
-        
-        x_shape, y_shape = self.grid_obst.shape
+        x_shape, y_shape = self.grid_static_obst.shape
         self.cv_index_boxes = []
         for box_ in self.all_normilized_boxes:
             box_cv_indexes = []
@@ -1119,15 +1102,6 @@ class ObsEnvironment(gym.Env):
                         ly = my
                         one_x_one_y_ind += curr_ind_add
 
-                #for val in np.linspace(0, 1, grid_resolution + 1)[1:]:
-                #    if x_f <= val:
-                #        break
-                #    one_x_one_x_ind += 1
-                #for val in np.linspace(0, 1, grid_resolution + 1)[1:]:
-                #    if y_f <= val:
-                #        break
-                #    one_x_one_y_ind += 1
-
                 if x_f == 0:
                     if prev_x <= curr_x and next_x <= curr_x:
                         x_ceil -= 1
@@ -1145,29 +1119,24 @@ class ObsEnvironment(gym.Env):
                 
                 cv_index_x = index_grid_rev_x
                 cv_index_y = y_shape - index_grid_rev_y 
-                #cv_index_x, cv_index_y = cv_index_y, cv_index_x
                 box_cv_indexes.append(Point(cv_index_x, cv_index_y))
             self.cv_index_boxes.append(box_cv_indexes)
 
         self.cv_index_goal_box = self.cv_index_boxes.pop(-1)
         self.cv_index_agent_box = self.cv_index_boxes.pop(-1)
-
-        #DEBUG
-        #if self.debug_save:
-        #    print("DEBUG indexes cv:", [[(point_.x, point_.y) for point_ in box] 
-        #                            for box in self.cv_index_boxes])
-
         
         #CV draw
-        for ind, cv_box in enumerate(self.cv_index_boxes):
+        for ind_box, cv_box in enumerate(self.cv_index_boxes):
             contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
                                  [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
             color = 1
-            if ind >= len(self.normalized_static_boxes):
-                color = (ind - len(self.normalized_static_boxes) + 1) / 10
-            self.grid_obst = cv.fillPoly(self.grid_obst, pts = [contours], color=color)
+            if ind_box >= len(self.normalized_static_boxes):
+                #color = (ind_box - len(self.normalized_static_boxes) + 1) / 10
+                self.grid_dynamic_obst = cv.fillPoly(self.grid_dynamic_obst, 
+                                                pts = [contours], color=color)    
+            self.grid_static_obst = cv.fillPoly(self.grid_static_obst, 
+                                                pts = [contours], color=color)
 
-        #print("DEBUG obst:", np.unique(self.grid_obst))
         cv_box = self.cv_index_agent_box
         contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
                                 [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
@@ -1177,32 +1146,26 @@ class ObsEnvironment(gym.Env):
             cv_box = self.cv_index_goal_box
             contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
                                     [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
-            self.grid_goal = cv.fillPoly(self.grid_goal, pts = [contours], color=1)
+            self.grid_with_adding_features = cv.fillPoly(self.grid_with_adding_features, pts = [contours], color=1)
         else:
             adding_features = self.getDiff(self.current_state)
-            self.grid_goal[0, 0:len(adding_features)] = adding_features
+            self.grid_with_adding_features[0, 0:len(adding_features)] = adding_features
             if self.adding_dynamic_features:
                 assert len(self.dynamic_obstacles) <= 2, "dynamic objects more than 2"
                 for ind, dyn_state in enumerate(self.dynamic_obstacles):
-                    self.grid_goal[ind + 1, 0:4] = [dyn_state.x - self.normalized_x_init, 
+                    self.grid_with_adding_features[ind + 1, 0:4] = [dyn_state.x - self.normalized_x_init, 
                                                                  dyn_state.y - self.normalized_y_init,
                                                                  dyn_state.theta,
                                                                  dyn_state.v]
             
         
-        #debug_img = 11
-        #if self.debug_save:
-        #    np.savetxt(f"obst_images_{debug_img}.csv", self.grid_obst, delimiter="", fmt='%0d')
-        #    np.savetxt(f"agent_images_{debug_img}.csv", self.grid_agent, delimiter="", fmt='%0d')
-        #    np.savetxt(f"goal_images_{debug_img}.csv", self.grid_goal, delimiter="", fmt='%0d')
-        #    self.debug_save = False
         if fake_static_obstacles:
-            self.grid_obst = np.zeros(self.grid_shape)
-        #print("SECOND DEBUG obst:", np.unique(self.grid_obst))
+            self.grid_static_obst = np.zeros(self.grid_shape)
         dim_images = []
-        dim_images.append(np.expand_dims(self.grid_obst, 0))
+        dim_images.append(np.expand_dims(self.grid_static_obst, 0))
+        dim_images.append(np.expand_dims(self.grid_dynamic_obst, 0))
         dim_images.append(np.expand_dims(self.grid_agent, 0))
-        dim_images.append(np.expand_dims(self.grid_goal, 0))
+        dim_images.append(np.expand_dims(self.grid_with_adding_features, 0))
         image = np.concatenate(dim_images, axis = 0)
         self.last_images.append(image)
         if first_obs:
@@ -1217,12 +1180,6 @@ class ObsEnvironment(gym.Env):
             self.obstacle_map = []
             self.obstacle_segments = []
 
-        #observation = dict()
-        #observation['obs'] = frames_images
-        #return frames_images
-        #observation['features'] = self.getDiff(self.current_state)
-        #return observation
-        #print("DEBUG SECOND-THIRD:", np.unique(frames_images[0]))
         return frames_images
 
 
@@ -1264,18 +1221,6 @@ class ObsEnvironment(gym.Env):
             agentBB = self.getBB(center_goal_state)
             self.drawObstacles(agentBB, color="-r")
 
-        #vehicle_heading = Vec2d(cos(center_state.theta),
-        #         sin(center_state.theta)) * self.vehicle.length / 2
-        #ax.arrow(self.current_state.x, self.current_state.y,
-        #         vehicle_heading.x, vehicle_heading.y, width=0.1, head_width=0.3,
-        #         color='green')
-
-        #goal_heading = Vec2d(cos(center_goal_state.theta),
-        #     sin(center_goal_state.theta)) * self.vehicle.length / 2
-        #ax.arrow(self.goal.x, self.goal.y, goal_heading.x,
-        #         goal_heading.y, width=0.1, head_width=0.3, color='red')
-
-
         fig.canvas.draw()  # draw the canvas, cache the renderer
         image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
         image = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
@@ -1287,91 +1232,6 @@ class ObsEnvironment(gym.Env):
         image[image > 0] = 255
 
         return image
-
-
-    def image_obs(self, figsize=(0.5, 1), first_obs=False):
-        '''
-        fig, ax = plt.subplots(figsize=figsize)
-
-        x_delta = self.MAX_DIST_LIDAR
-        y_delta = self.MAX_DIST_LIDAR
-
-        x_min = self.current_state.x - x_delta
-        x_max = self.current_state.x + x_delta
-        ax.set_xlim(x_min, x_max)
-
-        y_min = self.current_state.y - y_delta
-        y_max = self.current_state.y + y_delta
-        ax.set_ylim(y_min, y_max)
-        
-        if len(self.obstacle_segments) > 0:
-            for obstacle in self.obstacle_segments:
-                self.drawObstacles(obstacle)
-
-        for dyn_obst in self.dynamic_obstacles:
-            width = self.vehicle.width / 2 + 0.3
-            length = self.vehicle.length / 2 + 0.1
-            center_dyn_obst = self.vehicle.shift_state(dyn_obst)
-            agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
-
-            self.drawObstacles(agentBB)
-            plt.arrow(dyn_obst.x, dyn_obst.y, 2 * math.cos(dyn_obst.theta), 2 * math.sin(dyn_obst.theta), head_width=0.5, color='magenta')
-        
-        # ax.plot([self.current_state.x, self.goal.x], [self.current_state.y, self.goal.y], '--r')
-
-        center_state = self.vehicle.shift_state(self.current_state)
-        agentBB = self.getBB(center_state)
-        self.drawObstacles(agentBB, color="-g")
-
-        center_goal_state = self.vehicle.shift_state(self.goal)
-        agentBB = self.getBB(center_goal_state)
-        self.drawObstacles(agentBB, color="-r")
-
-        vehicle_heading = Vec2d(cos(center_state.theta),
-                 sin(center_state.theta)) * self.vehicle.length / 2
-        ax.arrow(self.current_state.x, self.current_state.y,
-                 vehicle_heading.x, vehicle_heading.y, width=0.1, head_width=0.3,
-                 color='green')
-
-        goal_heading = Vec2d(cos(center_goal_state.theta),
-             sin(center_goal_state.theta)) * self.vehicle.length / 2
-        ax.arrow(self.goal.x, self.goal.y, goal_heading.x,
-                 goal_heading.y, width=0.1, head_width=0.3, color='red')
-
-
-        fig.canvas.draw()  # draw the canvas, cache the renderer
-        image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
-        image = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-        #image = image.reshape(1600, 2000, 3)
-        # plt.show()
-        # plt.pause(10)
-        plt.close('all')
-        image = image[:, :, 0] + image[:, :, 1] + image[:, :, 2]
-        image[image > 0] = 255
-        '''
-        dim_images = []
-        for dim in range(3):
-            dim_images.append(
-                np.expand_dims(self.get_dim_image(dim=dim, 
-                                                  figsize=figsize), 0)
-                              )
-        image = np.concatenate(dim_images, axis = 0)           
-        self.last_images.append(image)
-        if first_obs:
-            for _ in range(self.frame_stack - 1):
-                self.last_images.append(image)
-        else:
-            self.last_images.pop(0)
-        #changes: get frames
-        #image = np.expand_dims(image, 0)
-        #for _ in range(self.frame_stack - 1):
-        #    image = np.expand_dims(np.zeros((3, 3)), 0)
-        #    image = np.expand_dims(np.zeros((3, 3)), 0)
-        #image = np.concatenate([image for _ in range(self.frame_stack)], axis = 0)
-        image = np.concatenate(self.last_images, axis = 0)
-
-        return image
-
 
 class ObsNormEnvironment(gym.ActionWrapper):
     def action(self, action):
