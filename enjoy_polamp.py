@@ -21,8 +21,8 @@ from sample_factory.utils.utils import log, AttrDict
 
 
 def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
-    save_image = True
-    save_obs = True
+    save_image = False
+    save_obs = False
     done_save_img = False
     debug_not_done_save_img = False
     debug_forward_move = None
@@ -193,8 +193,10 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
                             # print(f"done: {done}")
                             if debug_dynamic:
                                 #print("dyn vector:", obs[0].shape)
-                                print("1 dyn:", obs[0][2, 1, 0:4])
-                                print("2 dyn:", obs[0][2, 2, 0:4])
+                                #print("1 dyn:", obs[0][2, 1, 0:4])
+                                #print("2 dyn:", obs[0][2, 2, 0:4])
+                                #print("debug count:", obs[0][1][obs[0][1] == 2].sum())
+                                print("Debug values:", np.unique(obs[0][0]))
                             if save_image:
                                 #images.append(env.image_obs(validate=True))
                                 #print("DEBUG rew", rew)

@@ -239,6 +239,7 @@ class ConvEncoder(EncoderBase):
         #print("DEBUG type 0:", obs_dict['obs'][:, 2, 0,0:self.adding_dyn_features_size].device)
         #print("DEBUG type 1:", obs_dict['obs'][:, 2, 1,0:self.adding_dyn_features_size])
         #print("DEBUG type 2:", obs_dict['obs'][:, 2, 2,0:self.adding_dyn_features_size])
+        #print("DEBUG obs neural:", torch.unique(obs_dict['obs'][:, 1]))
         
         #dyn_encode = tuple(encode_(obs_dict['obs'][:, 2, ind + 1,0:self.adding_dyn_features_size]) 
         #    for ind, encode_ in enumerate(self.encode_dyn_obst_list))

@@ -142,9 +142,11 @@ class ObsEnvironment(gym.Env):
         self.adding_ego_features = True
         self.adding_dynamic_features = True
         self.debug_save = False
-        self.grid_resolution = 4
+        #self.grid_resolution = 4
         #self.grid_shape = (72, 136)
-        self.grid_shape = (120, 120)
+        #self.grid_shape = (120, 120)
+        self.grid_resolution = 10
+        self.grid_shape = (250, 250)
         assert self.grid_shape[0] % self.grid_resolution == 0 \
                    and self.grid_shape[1] % self.grid_resolution == 0, "incorrect grid shape"
 
@@ -779,8 +781,10 @@ class ObsEnvironment(gym.Env):
         #collision
         start_time = time.time()
         temp_grid_agent = np.full(self.grid_agent.shape, 2)
+        temp_grid_obst = np.full(self.grid_obst.shape, 0)
         temp_grid_agent[self.grid_agent == 1] = 1
-        collision = (self.grid_obst == temp_grid_agent).sum() > 0
+        temp_grid_obst[self.grid_obst > 0] = 1
+        collision = (temp_grid_obst == temp_grid_agent).sum() > 0
         end_time = time.time()
 
         self.collision_time += (end_time - start_time)
@@ -840,6 +844,8 @@ class ObsEnvironment(gym.Env):
         
         self.vehicle.prev_a = self.vehicle.a
         self.vehicle.prev_Eps = self.vehicle.Eps
+
+        #print("THIRD debug obst:", np.unique(observation[1]))
         
         return observation, reward, isDone, info
 
@@ -1157,12 +1163,12 @@ class ObsEnvironment(gym.Env):
         for ind, cv_box in enumerate(self.cv_index_boxes):
             contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
                                  [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
+            color = 1
             if ind >= len(self.normalized_static_boxes):
-                self.grid_obst = cv.fillPoly(self.grid_obst, pts = [contours], color= ind - len(self.normalized_static_boxes) + 2)
-            else:
-                self.grid_obst = cv.fillPoly(self.grid_obst, pts = [contours], color=1)
+                color = (ind - len(self.normalized_static_boxes) + 1) / 10
+            self.grid_obst = cv.fillPoly(self.grid_obst, pts = [contours], color=color)
 
-
+        #print("DEBUG obst:", np.unique(self.grid_obst))
         cv_box = self.cv_index_agent_box
         contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
                                 [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
@@ -1193,12 +1199,12 @@ class ObsEnvironment(gym.Env):
         #    self.debug_save = False
         if fake_static_obstacles:
             self.grid_obst = np.zeros(self.grid_shape)
-
+        #print("SECOND DEBUG obst:", np.unique(self.grid_obst))
         dim_images = []
         dim_images.append(np.expand_dims(self.grid_obst, 0))
         dim_images.append(np.expand_dims(self.grid_agent, 0))
         dim_images.append(np.expand_dims(self.grid_goal, 0))
-        image = np.concatenate(dim_images, axis = 0)           
+        image = np.concatenate(dim_images, axis = 0)
         self.last_images.append(image)
         if first_obs:
             assert len(self.last_images) == 1, "incorrect init images"
@@ -1217,6 +1223,7 @@ class ObsEnvironment(gym.Env):
         #return frames_images
         #observation['features'] = self.getDiff(self.current_state)
         #return observation
+        #print("DEBUG SECOND-THIRD:", np.unique(frames_images[0]))
         return frames_images
 
 
