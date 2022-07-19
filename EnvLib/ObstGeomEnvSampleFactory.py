@@ -773,6 +773,7 @@ class ObsEnvironment(gym.Env):
         collision = temp_grid_obst[self.grid_agent == 1].sum() > 0
         end_time = time.time()
 
+
         self.collision_time += (end_time - start_time)
         end_time = time.time()
         distanceToGoal = self.__goalDist(new_state)
