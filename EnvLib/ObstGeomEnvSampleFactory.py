@@ -142,11 +142,10 @@ class ObsEnvironment(gym.Env):
         self.adding_ego_features = True
         self.adding_dynamic_features = True
         self.debug_save = False
-        #self.grid_resolution = 4
-        #self.grid_shape = (72, 136)
-        #self.grid_shape = (120, 120)
-        self.grid_resolution = 10
-        self.grid_shape = (250, 250)
+        self.grid_resolution = 4
+        self.grid_shape = (120, 120)
+        #self.grid_resolution = 10
+        #self.grid_shape = (250, 250)
         assert self.grid_shape[0] % self.grid_resolution == 0 \
                    and self.grid_shape[1] % self.grid_resolution == 0, "incorrect grid shape"
 

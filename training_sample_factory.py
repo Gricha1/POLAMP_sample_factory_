@@ -21,6 +21,7 @@ from sample_factory.algorithms.utils.algo_utils import EXTRA_PER_POLICY_SUMMARIE
 from sample_factory.envs.env_registry import global_env_registry
 from sample_factory.run_algorithm import run_algorithm
 
+
 #from sample-factory.sample_factory.algorithms.utils.arguments import arg_parser, parse_args
 #from sample-factory.sample_factory.algorithms.appo.model_utils import register_custom_encoder, EncoderBase, get_obs_shape, nonlinearity
 #from sample-factory.sample_factory.algorithms.utils.algo_utils import EXTRA_PER_POLICY_SUMMARIES
@@ -28,6 +29,7 @@ from sample_factory.run_algorithm import run_algorithm
 #from sample-factory.sample_factory.run_algorithm import run_algorithm
 sys.path.insert(0, "../")
 from EnvLib.ObstGeomEnvSampleFactory import *
+from utils_SF.residual_net import ResnetEncoder
 use_wandb = True
 
 def custom_parse_args(argv=None, evaluation=False):
@@ -63,7 +65,7 @@ def custom_parse_args(argv=None, evaluation=False):
     cfg.encoder_subtype = 'convnet_simple'
 
     cfg.encoder_extra_fc_layers = 0
-    cfg.train_for_env_steps = 200000000
+    cfg.train_for_env_steps = 2000000000
     # cfg.custom_env_episode_len = 250
     # cfg.num_workers = 5
     # # cfg.policy_workers_per_policy=2
@@ -189,16 +191,11 @@ def add_extra_params_func(env, parser):
     # p.other_keys = environment_config
 
 
-# def override_default_params_func(env, parser):
-#     """
-#     Override default argument values for this family of environments.
-#     All experiments for environments from my_custom_env_ family will have these parameters unless
-#     different values are passed from command line.
-#     """
-#     parser.set_defaults(
-#         encoder_custom='custom_env_encoder',
-#         hidden_size=128,
-#     )
+def override_default_params_func(env, parser):
+    parser.set_defaults(
+        encoder_custom='custom_env_encoder',
+        hidden_size=128,
+    )
 
 def polamp_extra_summaries(policy_id, policy_avg_stats, env_steps, summary_writer, cfg):
     # score = np.mean(policy_avg_stats["Score"])
@@ -218,9 +215,10 @@ def register_custom_components():
         env_name_prefix='polamp_env',
         make_env_func=make_custom_env_func,
         add_extra_params_func=add_extra_params_func,
-        # override_default_params_func=override_default_params_func,
+        override_default_params_func=override_default_params_func,
     )
     EXTRA_PER_POLICY_SUMMARIES.append(polamp_extra_summaries)
+    register_custom_encoder('custom_env_encoder', ResnetEncoder)
 
 import json
 from policy_gradient.curriculum_train import generateDataSet

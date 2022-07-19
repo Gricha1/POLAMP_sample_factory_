@@ -64,6 +64,7 @@ def get_obs_shape(obs_space):
             obs_shape[key] = space.shape
     else:
         obs_shape.obs = obs_space.shape
+    #DEBUG custom changes
     obs_shape.obs = (obs_shape.obs[0] - 1, 
                 obs_shape.obs[1], obs_shape.obs[2])
     return obs_shape
