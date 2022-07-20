@@ -21,12 +21,13 @@ from sample_factory.utils.utils import log, AttrDict
 
 
 def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
-    save_image = False
+    save_image = True
     save_obs = False
     done_save_img = False
     debug_not_done_save_img = False
     debug_forward_move = None
     debug_dynamic = False
+    debug_dataset = True
     #DEBUG have to set assert on union tasks
     if use_wandb:
         wandb.init(project='validate_polamp', entity='grisha1')
@@ -87,8 +88,8 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
         start_time = time.time()
         count_map = 0
         for val_key in env.valTasks:
-            #if np.random.random() > 0.3:
-            #    continue
+            if np.random.random() > 0.3:
+                continue
             count_map += 1
             print("Num map:", count_map, "out of", len(env.valTasks))
             #if count_map < 7:
@@ -108,11 +109,9 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
                     id_start = id_start_backward
                     id_end = eval_tasks
             total_tasks += id_end - id_start
-            #print(f"debug val_key: {val_key}")
-            #print("type task:", type(env.valTasks[val_key]), 
-            #        "len:", len(env.valTasks[val_key]))
-            #for id in range(eval_tasks):
-            #for id in range(id_start, id_end):
+            if debug_dataset:
+                total_tasks = 100
+
             id = id_start
             saved_last_image = False
             episode_done = True
@@ -128,8 +127,8 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
                     else:
                         saved_last_image = False
                 
-                #if np.random.random() > 0.2:
-                #    continue
+                if np.random.random() > 0.2:
+                    continue
                 #print("DEBUG")
                 #print("debug task 1", env.valTasks[val_key][id][0])
                 #print("debug task 2", env.valTasks[val_key][id][1])

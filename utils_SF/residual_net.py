@@ -195,8 +195,10 @@ class ResnetEncoder(EncoderBase):
                                                     self.agentConvOutSize)
         ego_x = self.ego_net(x[:, 3, 0, 0:self.egoFeaturesCount])
         #print("DEBUG ego_x shape:", ego_x.shape)
-        first_dynamic_x = self.first_dynamic_net(x[:, 3, 1, 0:self.dynamicFeaturesCount])
-        second_dynamic_x = self.second_dynamic_net(x[:, 3, 2, 0:self.dynamicFeaturesCount])
+        first_dynamic_x = self.first_dynamic_net(x[:, 3, 1, 
+                                        0:self.dynamicFeaturesCount])
+        second_dynamic_x = self.second_dynamic_net(x[:, 3, 2, 
+                                        0:self.dynamicFeaturesCount])
 
         x = torch.cat((static_obst_x, dynamic_obst_x, agent_x, 
                         ego_x, first_dynamic_x, second_dynamic_x), dim=-1)
