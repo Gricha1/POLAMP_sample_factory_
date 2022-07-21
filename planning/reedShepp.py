@@ -334,7 +334,10 @@ def reedsSheppSteer(from_state, to_state):
     g_x, g_y, g_yaw = to_state.x, to_state.y, to_state.theta
     
     step_size = 0.1
-    curvature = 0.1
+    #radius = 2.57 / math.tan(28)
+    #curvature = 0.1
+    curvature = 0.2
+    #print("debug curv:", curvature)
     paths = calc_paths(s_x, s_y, s_yaw, g_x, g_y, g_yaw, curvature, step_size)
     if not paths:
         return None, None, None, None, None  # could not generate any path

@@ -21,13 +21,13 @@ from sample_factory.utils.utils import log, AttrDict
 
 
 def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
-    save_image = True
+    save_image = False
     save_obs = False
     done_save_img = False
     debug_not_done_save_img = False
     debug_forward_move = None
     debug_dynamic = False
-    debug_dataset = True
+    debug_dataset = False
     #DEBUG have to set assert on union tasks
     if use_wandb:
         wandb.init(project='validate_polamp', entity='grisha1')
@@ -204,10 +204,10 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
                                 images.append(image)
                                 #print("DEBUG img:", image.shape)
                             if save_obs:
-                                obs_img = np.expand_dims(env.grid_obst * 255, axis=2)
+                                obs_img = np.expand_dims(env.grid_static_obst * 255, axis=2)
                                 ag_img = np.expand_dims(env.grid_agent * 255, axis=2)
-                                goal_img = np.expand_dims(env.grid_goal * 255, axis=2)
-                                image = np.concatenate((obs_img, ag_img, goal_img), 
+                                dyn_img = np.expand_dims(env.grid_dynamic_obst * 255, axis=2)
+                                image = np.concatenate((obs_img, ag_img, dyn_img), 
                                                         axis=2)
                                 #print("DEUBG obs:", image.shape)
                                 images_observ.append(image)
