@@ -405,6 +405,8 @@ class PolicyCoreRNN(PolicyCoreBase):
         self.is_gru = False
 
         if cfg.rnn_type == 'gru':
+            log.debug('GRU layers: %d', cfg.rnn_num_layers)
+            log.debug('GRU hidden size: %d', cfg.hidden_size)
             self.core = nn.GRU(input_size, cfg.hidden_size, cfg.rnn_num_layers)
             self.is_gru = True
         elif cfg.rnn_type == 'lstm':

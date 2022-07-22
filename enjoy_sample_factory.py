@@ -40,8 +40,20 @@ with open("../configs/car_configs.json", 'r') as f:
 def main():
     """Script entry point."""
     register_custom_components()
+
+    #DEBUG
+    #global cfg
+    
     cfg = custom_parse_args(evaluation=True)
-    # print(f"config {cfg}")
+
+    #DEBUG
+    #import cProfile
+    #cProfile.run('enjoy(cfg)', 'restats')
+    #import pstats
+    #p = pstats.Stats('restats')
+    #p.print_stats()
+    #status = True
+    
     status = enjoy(cfg)
     return status
 

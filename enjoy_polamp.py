@@ -20,7 +20,7 @@ from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
 
 
-def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
+def enjoy(init_cfg, max_num_frames=450, use_wandb=True):
     save_image = False
     save_obs = False
     done_save_img = False
@@ -28,10 +28,15 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
     debug_forward_move = None
     debug_dynamic = False
     debug_dataset = False
+    debug_speed = False
     #DEBUG have to set assert on union tasks
     if use_wandb:
         wandb.init(project='validate_polamp', entity='grisha1')
-    while True:
+    i = 0
+    while i < 1:
+        if debug_speed:
+            i = i + 1            
+
         cfg = load_from_checkpoint(init_cfg)
 
         render_action_repeat = cfg.render_action_repeat if cfg.render_action_repeat is not None else cfg.env_frameskip
@@ -88,12 +93,17 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
         start_time = time.time()
         count_map = 0
         for val_key in env.valTasks:
-            if np.random.random() > 0.3:
-                continue
+            if debug_speed:
+                #print("DEBUG map:", env.valTasks.keys())
+                val_key = np.random.choice(list(env.valTasks.keys()))
+            if debug_dataset:
+                if np.random.random() > 0.3:
+                    continue
             count_map += 1
             print("Num map:", count_map, "out of", len(env.valTasks))
-            #if count_map < 7:
-            #    continue
+            #if debug_dataset:
+            #    if count_map < 7:
+            #        continue
             eval_tasks = len(env.valTasks[val_key])
             #total_tasks += eval_tasks
             id_start_forward = 0
@@ -126,12 +136,11 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
                         saved_last_image = True
                     else:
                         saved_last_image = False
+
+                if debug_dataset:    
+                    if np.random.random() > 0.2:
+                        continue
                 
-                if np.random.random() > 0.2:
-                    continue
-                #print("DEBUG")
-                #print("debug task 1", env.valTasks[val_key][id][0])
-                #print("debug task 2", env.valTasks[val_key][id][1])
                 obs = env.reset(idx=id, fromTrain=False, val_key=val_key)
 
                 start_time = time.time()
@@ -293,6 +302,9 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
                 #     wandb.log({f"task_{key}_{id}": wandb.Video(images, fps=10, format="gif")})
                 # print("##### Ending #####")
                 id += 1
+
+            if debug_speed:
+                break
         
         end_time = time.time()
         print("final time: ", end_time - start_time)

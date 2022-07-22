@@ -137,6 +137,7 @@ class VehicleConfig:
 
 class ObsEnvironment(gym.Env):
     def __init__(self, full_env_name, config):
+        self.validate_env = True
         self.gear_switch_penalty = True
         self.RS_reward = True
         self.adding_ego_features = True
@@ -554,9 +555,12 @@ class ObsEnvironment(gym.Env):
         self.grid_static_obst = None
         self.grid_agent = None
         self.grid_with_adding_features = None
+
         observation = self.generate_obst_image(first_obs=True)
-        
+    
         return observation
+    
+
     
     def __reward(self, current_state, new_state, goalReached, 
                 collision, overSpeeding, overSteering):
@@ -760,16 +764,12 @@ class ObsEnvironment(gym.Env):
         self.current_state = new_state
         self.last_action = action
 
+        
         observation = self.generate_obst_image()
 
         #collision
         start_time = time.time()
-        #temp_grid_agent = np.full(self.grid_agent.shape, 2)
-        #temp_grid_obst = np.full(self.grid_static_obst.shape, 0)
         temp_grid_obst = self.grid_static_obst + self.grid_dynamic_obst
-        #temp_grid_agent[self.grid_agent == 1] = 1
-        #temp_grid_obst[self.grid_static_obst > 0] = 1
-        #collision = (temp_grid_obst == temp_grid_agent).sum() > 0
         collision = temp_grid_obst[self.grid_agent == 1].sum() > 0
         end_time = time.time()
 
@@ -797,9 +797,13 @@ class ObsEnvironment(gym.Env):
             elif self.soft_constraints:
                 goalReached = distanceToGoal < self.SOFT_EPS
 
-        reward = self.__reward(self.old_state, new_state, 
-                               goalReached, collision, overSpeeding, 
-                               overSteering)
+        if not self.validate_env:
+            reward = self.__reward(self.old_state, new_state, 
+                                goalReached, collision, overSpeeding, 
+                                overSteering)
+        else:
+            reward = 0
+        
 
         if not (self.stepCounter % self.UPDATE_SPARSE):
             self.old_state = self.current_state
@@ -826,13 +830,9 @@ class ObsEnvironment(gym.Env):
                 isDone = True
                 if collision:
                     info["Collision"] = True
-            #print(f"info: {info}")
-            #print(f"isDone: {isDone}")
         
         self.vehicle.prev_a = self.vehicle.a
         self.vehicle.prev_Eps = self.vehicle.Eps
-
-        #print("THIRD debug obst:", np.unique(observation[1]))
         
         return observation, reward, isDone, info
 
