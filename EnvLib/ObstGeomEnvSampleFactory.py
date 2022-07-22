@@ -137,7 +137,7 @@ class VehicleConfig:
 
 class ObsEnvironment(gym.Env):
     def __init__(self, full_env_name, config):
-        self.validate_env = True
+        self.validate_env = False
         self.gear_switch_penalty = True
         self.RS_reward = True
         self.adding_ego_features = True

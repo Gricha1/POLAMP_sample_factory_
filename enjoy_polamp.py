@@ -21,13 +21,13 @@ from sample_factory.utils.utils import log, AttrDict
 
 
 def enjoy(init_cfg, max_num_frames=450, use_wandb=True):
-    save_image = False
+    save_image = True
     save_obs = False
     done_save_img = False
     debug_not_done_save_img = False
     debug_forward_move = None
     debug_dynamic = False
-    debug_dataset = False
+    debug_dataset = True
     debug_speed = False
     #DEBUG have to set assert on union tasks
     if use_wandb:

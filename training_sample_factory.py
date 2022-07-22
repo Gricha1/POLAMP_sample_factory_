@@ -50,8 +50,8 @@ def custom_parse_args(argv=None, evaluation=False):
     #cfg.encoder_subtype = 'mlp_mujoco'
     # cfg.rollout = 1
     # cfg.cpc_forward_steps = 1
-    cfg.rollout = 64
-    cfg.recurrence = 16
+    cfg.rollout = 256
+    cfg.recurrence = 32
     # cfg.use_rnn = 0
     # cfg.encoder_extra_fc_layers = 0
 
