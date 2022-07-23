@@ -140,6 +140,7 @@ def getDynamicTask(dataset_info, temp_info):
     forward_end_x = dataset_info["forward_end_x"]
     forward_start_y = dataset_info["forward_start_y"]
     forward_end_y = dataset_info["forward_end_y"]
+    second_goal = dataset_info["second_goal"]
     buttom_road_edge_y = dataset_info["buttom_road_edge_y"]
     road_width = dataset_info["road_width"]
     samples_theta_eps_ego = dataset_info["samples_theta_eps_ego"]
@@ -260,10 +261,15 @@ def getDynamicTask(dataset_info, temp_info):
                     dyn_obst_y_, 
                     dyn_theta, dynamic_speed_, 0]
 
+        #dynamic_tasks.append(([backward_start_x_, backward_start_y_, 
+        #                    theta_angle, 0., 0], 
+        #                    [0, 0, 0, 0, 0], 
+        #                    [dyn_obs]))
         dynamic_tasks.append(([backward_start_x_, backward_start_y_, 
-                            theta_angle, 0., 0], 
-                            [0, 0, 0, 0, 0], 
-                            [dyn_obs]))
+                             theta_angle, 0., 0], 
+                             second_goal, 
+                             [dyn_obs]))
+
 
     return dynamic_tasks
         
@@ -325,18 +331,19 @@ def generateTasks(config,
     theta_eps_ego = degToRad(15)
     samples_theta_eps_ego = np.linspace(-theta_eps_ego, theta_eps_ego, 30)
 
-    dataset_info = {
-        "forward_start_x": forward_start_x,
-        "forward_start_y": forward_start_y,
-        "forward_end_x": forward_end_x,
-        "forward_end_y": forward_end_y,
-        "backward_start_x": backward_start_x,
-        "backward_start_y": backward_start_y,
-        "buttom_road_edge_y": buttom_road_edge_y,
-        "samples_theta_eps_ego": samples_theta_eps_ego,
-        "road_width": road_width,
-        "union_without_forward_task": union_without_forward_task
-    }
+    #dataset_info = {
+    #    "forward_start_x": forward_start_x,
+    #    "forward_start_y": forward_start_y,
+    #    "forward_end_x": forward_end_x,
+    #    "forward_end_y": forward_end_y,
+    #    "backward_start_x": backward_start_x,
+    #    "backward_start_y": backward_start_y,
+    #    "second_goal": second_goal,
+    #    "buttom_road_edge_y": buttom_road_edge_y,
+    #    "samples_theta_eps_ego": samples_theta_eps_ego,
+    #    "road_width": road_width,
+    #    "union_without_forward_task": union_without_forward_task
+    #}
 
 
     if not validate_on_train: #if validate dataset
@@ -383,6 +390,7 @@ def generateTasks(config,
         "forward_end_y": forward_end_y,
         "backward_start_x": backward_start_x,
         "backward_start_y": backward_start_y,
+        "second_goal": second_goal,
         "buttom_road_edge_y": buttom_road_edge_y,
         "samples_theta_eps_ego": samples_theta_eps_ego,
         "road_width": road_width,

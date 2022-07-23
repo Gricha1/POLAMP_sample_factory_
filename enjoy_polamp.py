@@ -20,14 +20,14 @@ from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
 
 
-def enjoy(init_cfg, max_num_frames=450, use_wandb=True):
+def enjoy(init_cfg, max_num_frames=600, use_wandb=True):
     save_image = True
     save_obs = False
     done_save_img = False
     debug_not_done_save_img = False
-    debug_forward_move = None
+    debug_forward_move = False
     debug_dynamic = False
-    debug_dataset = True
+    debug_dataset = False
     debug_speed = False
     #DEBUG have to set assert on union tasks
     if use_wandb:
@@ -140,10 +140,9 @@ def enjoy(init_cfg, max_num_frames=450, use_wandb=True):
                 if debug_dataset:    
                     if np.random.random() > 0.2:
                         continue
-                
+                start_time = time.time()
                 obs = env.reset(idx=id, fromTrain=False, val_key=val_key)
 
-                start_time = time.time()
 
                 print(f"##### Initializing id {id + 1} of {id_end} #####")
                 rnn_states = torch.zeros([env.num_agents, get_hidden_size(cfg)], dtype=torch.float32, device=device)

@@ -76,7 +76,8 @@ class ResnetEncoder(EncoderBase):
 
         #DEBUG
         activation = nonlinearity(self.cfg)
-        conv_filters = [[input_ch, 32, 8, 4], [32, 64, 4, 2], [64, 128, 3, 2]]
+        #conv_filters = [[input_ch, 32, 8, 4], [32, 64, 4, 2], [64, 128, 3, 2]]
+        conv_filters = [[input_ch, 16, 8, 4], [16, 32, 4, 2]]
 
         agent_layers = []
         for layer in conv_filters:

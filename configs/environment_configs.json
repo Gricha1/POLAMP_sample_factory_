@@ -44,5 +44,5 @@
     "medium_task_difficulty": 0,
     "hard_task_difficulty": 1,
     "validate_on_train": 0,
-    "max_polamp_steps": 450
+    "max_polamp_steps": 600
 }

@@ -586,12 +586,18 @@ class ObsEnvironment(gym.Env):
                                     self.new_RS[1].copy(), 
                                     self.new_RS[2].copy())
                 self.new_RS = reedsSheppSteer(new_state, self.goal)
-                RS_L_prev = abs(self.prev_RS[2][0]) + \
-                        abs(self.prev_RS[2][1]) + abs(self.prev_RS[2][2])
-                RS_L_new = abs(self.new_RS[2][0]) + \
-                        abs(self.new_RS[2][1]) + abs(self.new_RS[2][2])
-                self.RS_diff = RS_L_prev - RS_L_new
-                reward.append(RS_L_prev - RS_L_new)
+
+                if self.new_RS[2] is None or self.prev_RS[2] is None:
+                    self.new_RS = None
+                    self.prev_RS = None
+                    reward.append(0)
+                else:
+                    RS_L_prev = abs(self.prev_RS[2][0]) + \
+                            abs(self.prev_RS[2][1]) + abs(self.prev_RS[2][2])
+                    RS_L_new = abs(self.new_RS[2][0]) + \
+                            abs(self.new_RS[2][1]) + abs(self.new_RS[2][2])
+                    self.RS_diff = RS_L_prev - RS_L_new
+                    reward.append(RS_L_prev - RS_L_new)
             else:
                 if (new_delta < 0.5):
                     new_delta = 0.5
@@ -923,10 +929,13 @@ class ObsEnvironment(gym.Env):
 
         reeshep_dist = 0
         if self.RS_reward and not self.new_RS is None:
-            reeshep_dist = abs(self.new_RS[2][0]) + \
-                abs(self.new_RS[2][1]) + abs(self.new_RS[2][2])
-            ax.plot([st[0] for st in self.new_RS[0]], 
-                [st[1] for st in self.new_RS[0]])
+            if self.new_RS[2] is None:
+               reeshep_dist = 0
+            else:
+                reeshep_dist = abs(self.new_RS[2][0]) + \
+                    abs(self.new_RS[2][1]) + abs(self.new_RS[2][2])
+                ax.plot([st[0] for st in self.new_RS[0]], 
+                    [st[1] for st in self.new_RS[0]])
         else:
             reeshep_dist = 0
         #print("RS diff:", self.RS_diff)
