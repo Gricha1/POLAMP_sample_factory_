@@ -696,19 +696,15 @@ class ObsEnvironment(gym.Env):
         a = action[0]
         Eps = action[1]
         dt = self.vehicle.delta_t
-        #if self.vehicle.is_jerk:
-        #    if abs(a - self.a) > self.jerk:
-        #        if a > self.a:
-        #            a = self.a + abs(a - self.a)
-        #        else:
-        #            a = self.a - abs(a - self.a)
         if constant_forward:
             a = 0
             Eps = 0
         dV = a * dt
         V = state.v + dV
         overSpeeding = V > self.vehicle.max_vel or V < self.vehicle.min_vel
-        V = np.clip(V, self.vehicle.min_vel, self.vehicle.max_vel)
+        
+        if not constant_forward:
+            V = np.clip(V, self.vehicle.min_vel, self.vehicle.max_vel)
 
         dv_s = Eps * dt
         v_s = previous_v_s + dv_s
@@ -746,20 +742,21 @@ class ObsEnvironment(gym.Env):
             #self.dyn_acc = np.random.randint(-self.vehicle.max_acc, self.vehicle.max_acc + 1)
             #self.dyn_ang_acc = np.random.randint(-self.vehicle.max_ang_acc, self.vehicle.max_ang_acc)
 
-            for index, (dyn_obst, v_s) in enumerate(zip(self.dynamic_obstacles, self.dynamic_obstacles_v_s)):
-            #for index, dyn_obst in enumerate(self.dynamic_obstacles):
+            for index, (dyn_obst, v_s) in enumerate(zip(self.dynamic_obstacles, 
+                                                    self.dynamic_obstacles_v_s)):
                 if len(next_dyn_states) > 0:
                     x, y, theta, v, st = next_dyn_states[index]
                     state = self.transform.rotateState([x, y, theta])
                     new_dyn_obst = State(state[0], state[1], state[2], v, st)
                 else:
-                    dyn_acc = np.random.random() * 2 * self.vehicle.max_acc - self.vehicle.max_acc
-                    dyn_ang_acc = np.random.random() * 2 * self.vehicle.max_ang_acc - self.vehicle.max_ang_acc
+                    dyn_acc = np.random.random() * 2 * \
+                            self.vehicle.max_acc - self.vehicle.max_acc
+                    dyn_ang_acc = np.random.random() * 2 * \
+                            self.vehicle.max_ang_acc - self.vehicle.max_ang_acc
                     constant_forward = not self.obst_random_actions
                     new_dyn_obst, _, _, new_v_s = self.obst_dynamic(dyn_obst, 
-                                                                    [dyn_acc, dyn_ang_acc], 
-                                                                    v_s,
-                                                                    constant_forward=constant_forward)
+                                                    [dyn_acc, dyn_ang_acc], v_s,
+                                                constant_forward=constant_forward)
                 
                 dynamic_obstacles.append(new_dyn_obst)
                 dynamic_obstacles_v_s.append(new_v_s)

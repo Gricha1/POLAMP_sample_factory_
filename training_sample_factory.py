@@ -41,67 +41,46 @@ def custom_parse_args(argv=None, evaluation=False):
     parser = arg_parser(argv, evaluation=evaluation)
 
     # add custom args here
-    parser.add_argument('--my_custom_arg', type=int, default=42, help='Any custom arguments users might define')
+    parser.add_argument('--my_custom_arg', type=int, 
+                    default=42, help='Any custom arguments users might define')
     # SampleFactory parse_args function does some additional processing (see comments there)
     cfg = parse_args(argv=argv, evaluation=evaluation, parser=parser)
     cfg.evaluation = evaluation
-    # print(f"config {cfg}")
-    #cfg.encoder_type = 'mlp'
-    #cfg.encoder_subtype = 'mlp_mujoco'
-    # cfg.rollout = 1
-    # cfg.cpc_forward_steps = 1
+    
     cfg.rollout = 256
     cfg.recurrence = 32
-    # cfg.use_rnn = 0
-    # cfg.encoder_extra_fc_layers = 0
-
-    #cfg.encoder_type = 'mlp'
-    #print("###########DEBUG############")
-    #print("encoder type setting")
-    #print("###########DEBUG############")
-
-    #cfg.encoder_type = 'mlp'
-    #cfg.encoder_subtype = 'mlp_mujoco'
+    
     cfg.encoder_type = 'conv'
     cfg.encoder_subtype = 'convnet_simple'
 
     cfg.encoder_extra_fc_layers = 0
     cfg.train_for_env_steps = 2000000000
-    # cfg.custom_env_episode_len = 250
-    # cfg.num_workers = 5
-    # # cfg.policy_workers_per_policy=2
-    # cfg.num_envs_per_worker = 1
-    # cfg.batch_size = 256
+    
     cfg.use_rnn = True
     cfg.rnn_num_layers = 1
     cfg.batch_size = 2048
-    # cfg.ppo_clip_ratio = 0.3
+    
     cfg.ppo_epochs = 1
     cfg.ppo_clip_value = 5.0
     cfg.reward_scale = 0.1
     cfg.reward_clip = 5.0
     cfg.with_vtrace = False
-    # cfg.ppo_epochs = 1
-    # cfg.actor_critic_share_weights = True
+    
     cfg.nonlinearity = 'relu'
-    # cfg.ppo_epochs = 10
-    # cfg.max_policy_lag = 1000000
+    
     cfg.exploration_loss_coeff = 0.005
-    # cfg.max_grad_norm = 0.0
+    
     cfg.kl_loss_coeff = 0.3
     cfg.value_loss_coeff = 0.5
-    # cfg.reward_clip = 100
+    
     cfg.use_wandb = use_wandb
     cfg.with_wandb = use_wandb
-    # cfg.experiment_summaries_interval = 5
+    
 
     return cfg
 
 def make_custom_env_func(full_env_name, cfg=None, env_config=None):
-    #dataSet = generateDataSet(our_env_config)
-    #dataSet = generateDataSet(our_env_config, car_config)
     dataSet, second_goal = generateDataSet(our_env_config, car_config)
-    #print("DEBUG sample:", type(dataSet))
     maps, trainTask, valTasks = dataSet["empty"]
     #maps, trainTask, valTasks = dataSet["obstacles"]
     # maps, trainTask, valTasks = dataSet["dyn_obstacles"]
@@ -138,7 +117,7 @@ def make_custom_env_func(full_env_name, cfg=None, env_config=None):
             'reward_config' : reward_config,
             'evaluation': cfg.evaluation,
             "second_goal" : second_goal
-    }
+        }
     else:
         environment_config = {
             'car_config': car_config,
@@ -161,36 +140,6 @@ def add_extra_params_func(env, parser):
     Specify any additional command line arguments for this family of custom environments.
     """
     p = parser
-    # p.add_argument('--custom_env_episode_len', default=250, type=int, help='Number of steps in the episode')
-    # p.env_framestack = 1
-    # p.encoder_type = 'mlp'
-    # p.encoder_subtype = 'mlp_mujoco'
-    
-    # dataSet = generateDataSet(our_env_config)
-    # maps, trainTask, valTasks = dataSet["empty"]
-    # maps_obst, trainTask_obst, valTasks_obst = dataSet["obstacles"]
-    # maps_dyn_obst, trainTask_dyn_obst, valTasks_dyn_obst = dataSet["dyn_obstacles"]
-    
-    # if not our_env_config["empty"]:
-    #     maps = maps_obst
-    #     trainTask = trainTask_obst
-    #     valTasks = valTasks_obst
-    # if not our_env_config["obstacles"]:
-    #     maps = maps_dyn_obst
-    #     trainTask = trainTask_dyn_obst
-    #     valTasks = valTasks_dyn_obst
-
-    # environment_config = {
-    #     'vehicle_config': car_config,
-    #     'tasks': trainTask,
-    #     'valTasks': valTasks,
-    #     'maps': maps,
-    #     'our_env_config' : our_env_config,
-    #     'reward_config' : reward_config
-    # }
-
-    # p.other_keys = environment_config
-
 
 def override_default_params_func(env, parser):
     parser.set_defaults(
@@ -198,18 +147,9 @@ def override_default_params_func(env, parser):
         hidden_size=1024,
     )
 
-def polamp_extra_summaries(policy_id, policy_avg_stats, env_steps, summary_writer, cfg):
-    # score = np.mean(policy_avg_stats["Score"])
-    # log.debug(f'Score: {round(float(score), 3)}')
-    # summary_writer.add_scalar('Score', score, env_steps)
-
-    # num_achievements = np.mean(policy_avg_stats["Num_achievements"])
-    # log.debug(f'Num_achievements: {round(float(num_achievements), 3)}')
-    # summary_writer.add_scalar('Num_achievements', num_achievements, env_steps)
+def polamp_extra_summaries(policy_id, policy_avg_stats, env_steps, 
+                           summary_writer, cfg):
     print(f"policy_id : {policy_id}")
-    # print(f"policy_avg_stats : {policy_avg_stats}")
-    # print(f"env_steps : {env_steps}")
-    # print(f"summary_writer : {summary_writer}")
 
 def register_custom_components():
     global_env_registry().register_env(

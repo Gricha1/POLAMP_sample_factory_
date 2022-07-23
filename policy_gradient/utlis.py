@@ -166,28 +166,29 @@ def getDynamicTask(dataset_info, temp_info):
         if not forward_dyn_movement:              
             if forward_start_x_ == forward_start_x[2]:
                 dyn_obst_x = [forward_end_x[1] + 6, forward_end_x[1] + 8]
-                dynamic_speed = [0.9, 1, 1.1]
+                dynamic_speed = [0.2, 0.5, 0.6]
             elif forward_start_x_ == forward_start_x[0]\
                 and forward_end_x_ == forward_end_x[1]:
                 dyn_obst_x = [forward_end_x[1] + 2, forward_end_x[1] + 4]
-                dynamic_speed = [0.9, 1.1, 1.3, 1.5]
+                dynamic_speed = [0.2, 0.4, 0.5, 0.6]
             elif forward_start_x_ == forward_start_x[0]\
                 and forward_end_x_ == forward_end_x[0]:
                 dyn_obst_x = [forward_end_x[0] + 3, forward_end_x[0] + 5]
-                dynamic_speed = [0.9, 1, 1.2]
+                dynamic_speed = [0.2, 0.5, 0.6]
             elif forward_start_x_ == forward_start_x[1]:
                 dyn_obst_x = [forward_end_x[0] + 8, 
                             forward_end_x[1] + 6,
                             forward_end_x[1] + 8]
-                dynamic_speed = [0.9, 1, 1.2]
+                dynamic_speed = [0.2, 0.5, 0.6]
             else:
                 dyn_obst_x = np.linspace(forward_start_x_ + 10, 
                             forward_start_x_ + 18, 3)
-                dynamic_speed = [0.9, 1, 1.2]
+                dynamic_speed = [0.2, 0.5, 0.6]
             
         else:
-            dyn_obst_x = np.linspace(forward_start_x_ - 18, forward_start_x_ - 10, 3)
-            dynamic_speed = [1.5, 1.1, 0.9]
+            dyn_obst_x = np.linspace(forward_start_x_ - 18, 
+                                     forward_start_x_ - 10, 3)
+            dynamic_speed = [0.6, 0.5, 0.2]
             
         dyn_obst_x_ = np.random.choice(dyn_obst_x)
         dyn_obst_y_ = np.random.choice(dyn_obst_y)
@@ -209,8 +210,9 @@ def getDynamicTask(dataset_info, temp_info):
                 dyn_obst_y_second_ = np.random.choice(dyn_obst_y)
                 dynamic_speed_second_ = np.random.choice(dynamic_speed)
             else:
-                dyn_obst_x_second = np.linspace(forward_end_x_ + 10, forward_end_x_ + 18, 3)
-                dynamic_speed_second = [1.5, 1.1, 0.9]
+                dyn_obst_x_second = np.linspace(forward_end_x_ + 10, 
+                                                forward_end_x_ + 18, 3)
+                dynamic_speed_second = [0.6, 0.5, 0.2]
                 dyn_obst_x_second_ = np.random.choice(dyn_obst_x_second)
                 dyn_obst_y_second_ = np.random.choice(dyn_obst_y)
                 dynamic_speed_second_ = np.random.choice(dynamic_speed_second)
@@ -233,7 +235,7 @@ def getDynamicTask(dataset_info, temp_info):
     else:
         backward_start_x_ = temp_info["backward_start_x_"]
         backward_start_y_ = temp_info["backward_start_y_"]
-
+        
         if road_width <= 3:
             dyn_obst_y = [buttom_road_edge_y + road_width + 0.5 * road_width, 
                                 buttom_road_edge_y + 0.5 * road_width]
@@ -242,14 +244,14 @@ def getDynamicTask(dataset_info, temp_info):
                         buttom_road_edge_y + road_width, 
                         buttom_road_edge_y + 0.5 * road_width]
         if not forward_dyn_movement:
-            dyn_obst_x = np.linspace(backward_start_x_ + 17, 
-                                        backward_start_x_ + 7, 3)
-            dynamic_speed = [1.5, 1.1, 0.9]
+            dyn_obst_x = np.linspace(backward_start_x_ + 18, 
+                                        backward_start_x_ + 14, 3)
+            dynamic_speed = [0.6, 0.5, 0.2]
         else: 
-            dyn_obst_x = np.linspace(backward_start_x_ - 17, 
-                                        backward_start_x_ - 7, 3)
-            dynamic_speed = [1.5, 1.1, 0.9]
-            
+            dyn_obst_x = np.linspace(backward_start_x_ - 18, 
+                                        backward_start_x_ - 14, 3)
+            dynamic_speed = [0.6, 0.5, 0.2]
+        
         dyn_obst_x_ = np.random.choice(dyn_obst_x)
         dyn_obst_y_ = np.random.choice(dyn_obst_y)
         dynamic_speed_ = np.random.choice(dynamic_speed)
@@ -258,21 +260,17 @@ def getDynamicTask(dataset_info, temp_info):
         else:
             dyn_theta = degToRad(180)
         dyn_obs = [dyn_obst_x_, 
-                    dyn_obst_y_, 
-                    dyn_theta, dynamic_speed_, 0]
+                   dyn_obst_y_, 
+                   dyn_theta, dynamic_speed_, 0]
 
-        #dynamic_tasks.append(([backward_start_x_, backward_start_y_, 
-        #                    theta_angle, 0., 0], 
-        #                    [0, 0, 0, 0, 0], 
-        #                    [dyn_obs]))
         dynamic_tasks.append(([backward_start_x_, backward_start_y_, 
                              theta_angle, 0., 0], 
                              second_goal, 
                              [dyn_obs]))
 
-
     return dynamic_tasks
         
+
 def generateTasks(config, 
                 bottom_left_boundary_center_x,
                 bottom_left_boundary_center_y, 
@@ -283,20 +281,7 @@ def generateTasks(config,
                 dynamic, union, union_without_forward_task,
                 validate_on_train=False):
                                  
-    valTasks = []
-
-    EASY_TASK = False # static positions
-    MEDIUM_TASK = False # position OX + OY
-    HARD_TASK = False # rotation + position
-    if task_difficulty == "easy":
-        EASY_TASK = True
-    elif task_difficulty == "medium":
-        MEDIUM_TASK = True
-    else:
-        HARD_TASK = True
-    
-    assert (EASY_TASK + MEDIUM_TASK + HARD_TASK) == 1, \
-        "custom assert: pick only one task"
+    Tasks = []
 
     #generate tasks
     forward_start_x = np.array(
@@ -331,21 +316,6 @@ def generateTasks(config,
     theta_eps_ego = degToRad(15)
     samples_theta_eps_ego = np.linspace(-theta_eps_ego, theta_eps_ego, 30)
 
-    #dataset_info = {
-    #    "forward_start_x": forward_start_x,
-    #    "forward_start_y": forward_start_y,
-    #    "forward_end_x": forward_end_x,
-    #    "forward_end_y": forward_end_y,
-    #    "backward_start_x": backward_start_x,
-    #    "backward_start_y": backward_start_y,
-    #    "second_goal": second_goal,
-    #    "buttom_road_edge_y": buttom_road_edge_y,
-    #    "samples_theta_eps_ego": samples_theta_eps_ego,
-    #    "road_width": road_width,
-    #    "union_without_forward_task": union_without_forward_task
-    #}
-
-
     if not validate_on_train: #if validate dataset
         val_start_forward_x = []
         for i in range(len(forward_start_x) - 1):
@@ -379,8 +349,10 @@ def generateTasks(config,
         forward_start_y = val_start_forward_y
         forward_end_x = val_end_forward_x
         forward_end_y = val_end_forward_y
-        backward_start_x = np.linspace(forward_end_x[0], forward_end_x[1], 5)
-        backward_start_y = np.linspace(forward_end_y[0], forward_end_y[1], 5)
+        backward_start_x = np.linspace(forward_end_x[0], 
+                                       forward_end_x[1], 5)
+        backward_start_y = np.linspace(forward_end_y[0], 
+                                       forward_end_y[1], 5)
 
 
     dataset_info = {
@@ -398,7 +370,8 @@ def generateTasks(config,
     }
 
     #print("debug utils:", "validate forward:", not validate_on_train, 
-    #     len(forward_start_y) * len(forward_end_x) * len(forward_end_y) * len(forward_start_x))
+    #     len(forward_start_y) * len(forward_end_x) * \
+    #     len(forward_end_y) * len(forward_start_x))
 
     #forward_tasks(3 * 2 * 3 * 3 = 48 tasks)
     for forward_start_y_ in forward_start_y:
@@ -412,95 +385,42 @@ def generateTasks(config,
                     temp_info["forward_start_y_"] = forward_start_y_
                     temp_info["forward_end_y_"] = forward_end_y_
 
-                    if not union: # not union DIDNT COMPLETE
+                    if not union:
                         if dynamic:
-                            #dynamic_speed_ = np.random.choice(dynamic_speed)
-                            #dyn_obs = [forward_end_x_, buttom_road_edge_y + road_width + 0.5 * road_width, 
-                            #        degToRad(180), dynamic_speed_, 0]        
-
-                            #valTasks.append(([forward_start_x_, forward_start_y_, 0, 0., 0], 
-                            #                [forward_end_x_, forward_end_y_, 0, 0, 0], 
-                            #                [dyn_obs]))  
-                            valTasks.extend(getDynamicTask(dataset_info, 
+                            Tasks.extend(getDynamicTask(dataset_info, 
                                                                 temp_info))                        
-                        else:
-                            if EASY_TASK:
-                                #valTasks.append(([forward_start_x[2], forward_start_y[2], 0, 0., 0], 
-                                #                [forward_end_x[1], forward_end_y[2], 0, 0, 0]))
-                                valTasks.append(([forward_start_x[2], forward_start_y[2], 0, 0., 0], 
-                                                [forward_end_x[1], forward_end_y[1], 0, 0, 0]))
-
-                            elif MEDIUM_TASK:
-                                valTasks.append(([forward_start_x_, forward_start_y_, 0, 0., 0], 
-                                                [forward_end_x_, forward_end_y_, 0, 0, 0]))
-
-                            elif HARD_TASK:   
-                                theta_angle = np.random.choice(samples_theta_eps_ego)          
-                                valTasks.append(([forward_start_x_, forward_start_y_, 0, 0., 0], 
-                                                [forward_end_x_, forward_end_y_, theta_angle, 0, 0]))
+                        else: 
+                            theta_angle = np.random.choice(samples_theta_eps_ego)          
+                            Tasks.append(([forward_start_x_, forward_start_y_, 
+                                              0, 0., 0], 
+                                             [forward_end_x_, forward_end_y_, 
+                                              theta_angle, 0, 0]))
 
                     else: #union tasks
                         forward_dyn_movement = np.random.choice([True, False])
                         theta_angle = np.random.choice(samples_theta_eps_ego) 
                         if dynamic:
-                            valTasks.extend(getDynamicTask(dataset_info, 
+                            Tasks.extend(getDynamicTask(dataset_info, 
                                             temp_info))
 
                         else:        
-                            if EASY_TASK:
-                                component_1 = forward_start_x_[2]
-                                component_2 = forward_start_y_[2]
-                                component_3 = 0
-                                component_4 = 0
-                                component_5 = 0
-                                component_6 = forward_end_x_[1]
-                                component_7 = forward_end_y_[2]
-                                component_8 = 0
-                                component_9 = 0
-                                component_10 = 0
-
-                            elif MEDIUM_TASK:
-                                component_1 = forward_start_x_
-                                component_2 = forward_start_y_
-                                component_3 = 0
-                                component_4 = 0
-                                component_5 = 0
-                                component_6 = forward_end_x_
-                                component_7 = forward_end_y_
-                                component_8 = 0
-                                component_9 = 0
-                                component_10 = 0
-
-                            elif HARD_TASK:
-                                component_1 = forward_start_x_
-                                component_2 = forward_start_y_
-                                component_3 = 0
-                                component_4 = 0
-                                component_5 = 0
-                                component_6 = forward_end_x_
-                                component_7 = forward_end_y_
-                                component_8 = 0
-                                component_9 = 0
-                                component_10 = 0    
-                                theta_angle = np.random.choice(samples_theta_eps_ego)   
-                                component_8 = theta_angle  
+                            theta_angle = np.random.choice(samples_theta_eps_ego)   
                             if union_without_forward_task:
-                                valTasks.append(([component_1, component_2, 
-                                                    component_3, component_4, component_5], 
-                                                    [0, 0, 0, 0, 0]))
-                                valTasks.append(([component_6, component_7, 
-                                                    component_8, component_9, component_10], 
-                                                    [0, 0, 0, 0, 0]))                  
+                                Tasks.append(([forward_start_x_, forward_start_y_, 
+                                                  0, 0, 0], 
+                                                 [0, 0, 0, 0, 0]))
+                                Tasks.append(([forward_end_x_, forward_end_y_, 
+                                                  theta_angle, 0, 0], 
+                                                 [0, 0, 0, 0, 0]))                  
                             else:
-                                valTasks.append(([component_1, component_2, 
-                                                    component_3, component_4, component_5], 
-                                                    [component_6, component_7, component_8, 
-                                                        component_9, component_10]))
+                                Tasks.append(([forward_start_x_, forward_start_y_, 
+                                                    0, 0, 0], 
+                                                 [forward_end_x_, forward_end_y_, 
+                                                    theta_angle, 0, 0]))
 
     if not union: # backward tasks
         #print("debug utils:", "validate backward:", not validate_on_train, 
         # len(backward_start_x) * len(backward_start_y))
-        #backward_tasks(4 * 3 = 12 tasks)
         for backward_start_x_ in backward_start_x:
             for backward_start_y_ in backward_start_y:
                 temp_info = {}
@@ -508,31 +428,13 @@ def generateTasks(config,
                 temp_info["backward_start_x_"] = backward_start_x_
                 temp_info["backward_start_y_"] = backward_start_y_
 
-                if dynamic:
-                    '''
-                    dynamic_speed_ = np.random.choice(dynamic_speed)
-                    dyn_obs = [forward_end_x_, buttom_road_edge_y + road_width + 0.5 * road_width, 
-                            degToRad(180), dynamic_speed_, 0]        
-
-                    valTasks.append(([forward_start_x_, forward_start_y_, 0, 0., 0], 
-                                    [forward_end_x_, forward_end_y_, 0, 0, 0], 
-                                    [dyn_obs]))        
-                    '''                  
-                    valTasks.extend(getDynamicTask(dataset_info, 
+                if dynamic:                
+                    Tasks.extend(getDynamicTask(dataset_info, 
                                             temp_info))
-                else:
-                    if EASY_TASK:
-                        valTasks.append(([backward_start_x[2], backward_start_y[2], 0, 0., 0], 
+                else: 
+                    theta_angle = np.random.choice(samples_theta_eps_ego)           
+                    Tasks.append(([backward_start_x_, backward_start_y_, 
+                                        theta_angle, 0., 0], 
                                         second_goal))
 
-                    elif MEDIUM_TASK:
-                        valTasks.append(([backward_start_x_, backward_start_y_, 0, 0., 0], 
-                                        second_goal))
-
-                    elif HARD_TASK:  
-                        theta_angle = np.random.choice(samples_theta_eps_ego)           
-                        valTasks.append(([backward_start_x_, backward_start_y_, theta_angle, 0., 0], 
-                                        second_goal))
-
-
-    return valTasks
+    return Tasks
