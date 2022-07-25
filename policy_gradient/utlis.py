@@ -220,10 +220,10 @@ def getDynamicTask(dataset_info, temp_info):
                     dyn_obst_y_second_, 
                     dyn_theta, dynamic_speed_second_, 0]
                     
-            dynamic_tasks.append([forward_end_x_, forward_end_y_, 
+            dynamic_tasks.append(([forward_end_x_, forward_end_y_, 
                                 theta_angle, 0., 0], 
                                 [0, 0, 0, 0, 0], 
-                                [dyn_obs_second])
+                                [dyn_obs_second]))
         else:
             dynamic_tasks.append(([forward_start_x_, forward_start_y_, 
                                 0, 0., 0], 

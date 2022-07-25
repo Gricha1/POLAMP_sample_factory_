@@ -1,5 +1,5 @@
 {
-    "collision": 8,
+    "collision": 16,
     "goal": 20,
     "timeStep": 0.05,
     "distance": 1,

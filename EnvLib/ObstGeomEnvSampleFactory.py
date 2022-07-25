@@ -224,6 +224,9 @@ class ObsEnvironment(gym.Env):
         self.union_without_forward_task = env_config['union_without_forward_task']
         assert not(not self.unionTask and self.union_without_forward_task), \
                 "incorrect set union task: without forward but not union"
+        assert self.unionTask and self.union_without_forward_task or \
+               not self.unionTask and not self.union_without_forward_task, \
+               f"forgot without forward task"
         if self.unionTask:
                 self.second_goal = State(config["second_goal"][0], 
                                 config["second_goal"][1],
