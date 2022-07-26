@@ -55,29 +55,8 @@ class VehicleConfig:
     def dynamic(self, state, action):
         a = action[0]
         Eps = action[1]
-
-        #DEBUG
-        #a = -1
-        #Eps = -1
-        
-        #print("DEBUG actions:", "j_a:", j_a, "j_Eps:", j_Eps)
-        #j_a = j_a * self.jerk
-        #j_Eps = j_Eps * self.jerk
-        #DEBUG
-        #j_a = 0.5
-        #j_Eps = 0
-
         dt = self.delta_t
-        #j_a = np.clip(j_a, -self.jerk, self.jerk)
-        #j_Eps = np.clip(j_Eps, -self.jerk, self.jerk)
-        #self.j_a = j_a
-        #self.j_Eps = j_Eps
-        
-
-        #da = j_a * dt
-        #a = self.a + da
-        #dEps = j_Eps * dt
-        #Eps = self.Eps + dEps
+  
         if self.use_clip:
             a = np.clip(a, -self.max_acc, self.max_acc)
             Eps = np.clip(Eps, -self.max_ang_acc, self.max_ang_acc)
@@ -137,7 +116,9 @@ class VehicleConfig:
 
 class ObsEnvironment(gym.Env):
     def __init__(self, full_env_name, config):
-        self.validate_env = False
+        self.validate_env = env_config = config["validate_env"]
+        if self.validate_env:
+            print("DEBUG: VALIDATE ENV")
         self.gear_switch_penalty = True
         self.RS_reward = True
         self.adding_ego_features = True
@@ -146,8 +127,6 @@ class ObsEnvironment(gym.Env):
         self.gridCount = 4
         self.grid_resolution = 4
         self.grid_shape = (120, 120)
-        #self.grid_resolution = 10
-        #self.grid_shape = (250, 250)
         assert self.grid_shape[0] % self.grid_resolution == 0 \
                    and self.grid_shape[1] % self.grid_resolution == 0, "incorrect grid shape"
 
@@ -161,7 +140,6 @@ class ObsEnvironment(gym.Env):
         self.obstacle_segments = []
         self.dyn_obstacle_segments = []
         self.last_observations = []
-        self.hardGoalReached = False
         self.stepCounter = 0
         self.vehicle = VehicleConfig(config['car_config'])
         self.trainTasks = config['tasks']
@@ -193,7 +171,6 @@ class ObsEnvironment(gym.Env):
         self.with_potential = env_config['reward_with_potential']
         self.frame_stack = env_config['frame_stack']
         self.bias_beam = env_config['bias_beam']
-        self.n_beams = env_config['n_beams']
         self.use_acceleration_penalties = env_config['use_acceleration_penalties']
         self.use_velocity_goal_penalty = env_config['use_velocity_goal_penalty']
         self.use_different_acc_penalty = env_config['use_different_acc_penalty']
@@ -347,35 +324,6 @@ class ObsEnvironment(gym.Env):
                     
         return relevant_obstacles
 
-    def __getObservation(self, state):
-        new_beams = []
-        lst_indexes = []
-        if len(self.obstacle_segments) > 0 or len(self.dyn_obstacle_segments) > 0:
-            with_angles=True
-            nearestObstacles = self.getRelevantSegments(state, with_angles=with_angles)
-            for angle in self.angle_space:
-                beam = self.__sendBeam(state, angle, nearestObstacles, 
-                                with_angles=with_angles, lst_indexes=lst_indexes)
-                new_beams.append(beam - self.bias_beam)
-        else:
-            for angle in self.angle_space:
-                new_beams.append(self.MAX_DIST_LIDAR - self.bias_beam)
-
-        if len(self.last_observations) == 0:
-            for _ in range(self.frame_stack - 1):
-                self.last_observations.extend(new_beams)
-                self.last_observations.extend(self.getDiff(state))
-                self.last_observations.append(self.task)
-
-        self.last_observations.extend(new_beams)
-        obs_from_state = self.getDiff(state)
-        self.last_observations.extend(obs_from_state)
-        self.last_observations.append(self.task)
-        observation = self.last_observations
-        self.last_observations = self.last_observations[len(new_beams) 
-                                                    + len(obs_from_state) + 1:]
-
-        return np.array(observation, dtype=np.float32), np.min(new_beams), lst_indexes
 
     def getDiff(self, state):
         if self.goal is None:
@@ -393,13 +341,7 @@ class ObsEnvironment(gym.Env):
         w = self.vehicle.w
         a = self.vehicle.a
         Eps = self.vehicle.Eps
-        #delta.extend([dx, dy, dtheta, dv, dsteer, theta, v, steer])
-        #DEBUG adding angular velocity
         delta.extend([dx, dy, dtheta, dv, dsteer, theta, v, steer, v_s])
-        #delta.extend([dx, dy, dtheta, dv, dsteer, 
-        #             theta, v, steer, 
-        #             w, v_s,
-        #             a, Eps])
         
         return delta
 
@@ -490,14 +432,15 @@ class ObsEnvironment(gym.Env):
         else:
             current, goal = self.generateSimpleTask(obstacles)
 
-        self.current_state, self.goal = self.transformTask(current, goal, obstacles, self.dynamic_obstacles)
+        self.current_state, self.goal = self.transformTask(current, goal, 
+                                            obstacles, self.dynamic_obstacles)
         self.old_state = self.current_state
 
     def reset(self, idx=None, fromTrain=True, val_key=None, rrt=False):
         self.maps = dict(self.maps_init)
-        self.obst_random_actions = np.random.choice([True, 
-                                                False, False, False, False])
-        self.hardGoalReached = False
+        if not self.validate_env:
+            self.obst_random_actions = np.random.choice([True, 
+                                                    False, False, False, False])
         self.stepCounter = 0
         self.last_observations = []
         self.last_action = [0., 0.]
@@ -559,7 +502,7 @@ class ObsEnvironment(gym.Env):
         self.grid_agent = None
         self.grid_with_adding_features = None
 
-        observation = self.generate_obst_image(first_obs=True)
+        observation = self.get_observation(first_obs=True)
     
         return observation
     
@@ -771,7 +714,7 @@ class ObsEnvironment(gym.Env):
         self.last_action = action
 
         
-        observation = self.generate_obst_image()
+        observation = self.get_observation()
 
         #collision
         start_time = time.time()
@@ -968,7 +911,7 @@ class ObsEnvironment(gym.Env):
     def close(self):
         pass
 
-    def generate_obst_image(self, first_obs=False):
+    def get_observation(self, first_obs=False):
         fake_static_obstacles = False
         if len(self.obstacle_segments) == 0:
             fake_static_obstacles = True
@@ -1246,25 +1189,3 @@ class ObsEnvironment(gym.Env):
         image[image > 0] = 255
 
         return image
-
-class ObsNormEnvironment(gym.ActionWrapper):
-    def action(self, action):
-        action = np.array(action)
-        act_k = (self.action_space.high - self.action_space.low) / 2.
-        act_b = (self.action_space.high + self.action_space.low) / 2.
-        return act_k * action + act_b
-
-    def reverse_action(self, action):
-        action = np.array(action)
-        act_k = (self.action_space.high - self.action_space.low) / 2.
-        act_b = (self.action_space.high + self.action_space.low) / 2.
-        return (action - act_b) / act_k
-
-    def step(self, *args, **kwargs):
-        return self.env.step(*args, **kwargs)
-
-    def render(self, *args, **kwargs):
-        return self.env.render(*args, **kwargs)
-
-    def reset(self, *args, **kwargs):
-        return self.env.reset(*args, **kwargs)

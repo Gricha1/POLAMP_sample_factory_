@@ -52,10 +52,10 @@ def custom_parse_args(argv=None, evaluation=False):
     cfg = parse_args(argv=argv, evaluation=evaluation, parser=parser)
     cfg.evaluation = evaluation
     
-    #cfg.rollout = 512
-    #cfg.recurrence = 128
-    cfg.rollout = 32
-    cfg.recurrence = 32
+    cfg.rollout = 512
+    cfg.recurrence = 128
+    #cfg.rollout = 32
+    #cfg.recurrence = 32
     
     cfg.encoder_type = 'conv'
     cfg.encoder_subtype = 'convnet_simple'
