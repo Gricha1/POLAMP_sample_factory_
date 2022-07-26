@@ -777,6 +777,7 @@ class ObsEnvironment(gym.Env):
         start_time = time.time()
         temp_grid_obst = self.grid_static_obst + self.grid_dynamic_obst
         collision = temp_grid_obst[self.grid_agent == 1].sum() > 0
+        collision = collision or (self.grid_agent.sum() == 0)
         end_time = time.time()
 
 

@@ -32,10 +32,10 @@
     "use_acceleration_penalties" : 0,
     "use_velocity_goal_penalty" : 0,
     "use_different_acc_penalty": 0,
-    "union_without_forward_task": 0,
-    "union": 0,
+    "union_without_forward_task": 1,
+    "union": 1,
     "dynamic": 1,
-    "static": 0,
+    "static": 1,
     "easy_map_constraints": 0,
     "medium_map_constraints": 0,
     "hard_map_constraints": 1,
@@ -44,5 +44,5 @@
     "medium_task_difficulty": 0,
     "hard_task_difficulty": 1,
     "validate_on_train": 0,
-    "max_polamp_steps": 600
+    "max_polamp_steps": 900
 }

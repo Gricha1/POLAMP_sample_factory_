@@ -20,8 +20,8 @@ from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
 
 
-def enjoy(init_cfg, max_num_frames=600, use_wandb=True):
-    save_image = False
+def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
+    save_image = True
     save_obs = False
     done_save_img = False
     debug_not_done_save_img = False
@@ -92,19 +92,23 @@ def enjoy(init_cfg, max_num_frames=600, use_wandb=True):
         # print(f"env.maps: {env.maps}")
         start_time = time.time()
         count_map = 0
+        print("DEBUG val:")
+        print(env.valTasks.keys())
         for val_key in env.valTasks:
+            if debug_dataset:
+                total_tasks = 100
             if debug_speed:
                 #print("DEBUG map:", env.valTasks.keys())
                 val_key = np.random.choice(list(env.valTasks.keys()))
-            if debug_dataset:
-                if np.random.random() > 0.3:
-                    continue
-            count_map += 1
-            print("Num map:", count_map, "out of", len(env.valTasks))
             #if debug_dataset:
-            #    if count_map < 7:
+            #    if np.random.random() > 0.3:
             #        continue
+            count_map += 1
             eval_tasks = len(env.valTasks[val_key])
+            print("Num map:", count_map, "out of", len(env.valTasks), "count task:", eval_tasks)
+            if debug_dataset:
+                if count_map < 7:
+                    continue
             #total_tasks += eval_tasks
             id_start_forward = 0
             id_start_backward = 36
@@ -119,8 +123,8 @@ def enjoy(init_cfg, max_num_frames=600, use_wandb=True):
                     id_start = id_start_backward
                     id_end = eval_tasks
             total_tasks += id_end - id_start
-            if debug_dataset:
-                total_tasks = 100
+            #if debug_dataset:
+            #    total_tasks = 100
 
             id = id_start
             saved_last_image = False
@@ -137,9 +141,9 @@ def enjoy(init_cfg, max_num_frames=600, use_wandb=True):
                     else:
                         saved_last_image = False
 
-                if debug_dataset:    
-                    if np.random.random() > 0.2:
-                        continue
+                #if debug_dataset:    
+                #    if np.random.random() > 0.2:
+                #        continue
                 start_time = time.time()
                 obs = env.reset(idx=id, fromTrain=False, val_key=val_key)
 
