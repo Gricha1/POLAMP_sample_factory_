@@ -134,18 +134,167 @@ def generateValidateTasks(config):
     return valTasks
 
 
-def generateDataSet(our_env_config, car_config):
-    #CUSTOM DATASET
+def generateTestDataSet(our_env_config, car_config):
     dataSet = {}
     maps = {} 
     trainTask = {}
     valTasks = {}
-    if our_env_config["easy_task_difficulty"]:
-        task_difficulty = "easy"
-    elif our_env_config["medium_task_difficulty"]:
-        task_difficulty = "medium"
-    else:
-        task_difficulty = "hard"
+    #boundaries
+    parking_height = 2.7
+    parking_width = 4.5
+    bottom_left_boundary_width = parking_width / 2
+    bottom_right_boundary_width = parking_width / 2
+    bottom_left_boundary_height = 6 # any value
+    bottom_right_boundary_height = bottom_left_boundary_height
+    bottom_left_boundary_center_x = 5 # any value
+    bottom_right_boundary_center_x = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height \
+                + bottom_right_boundary_height
+    bottom_left_boundary_center_y = -5.5 # init value
+    bottom_right_boundary_center_y = bottom_left_boundary_center_y
+    bottom_road_edge_y = bottom_left_boundary_center_y + \
+                    bottom_left_boundary_width
+    upper_boundary_width = 0.5 # any value
+    upper_boundary_height = 17 
+    bottom_down_width = upper_boundary_width 
+    bottom_down_height = parking_height / 2 
+    upper_boundary_center_x = bottom_left_boundary_center_x \
+                    + bottom_left_boundary_height + parking_height / 2
+    bottom_down_center_x = upper_boundary_center_x
+    bottom_down_center_y = bottom_left_boundary_center_y \
+                - bottom_left_boundary_width - bottom_down_width \
+                - 0.2 # dheight
+    #get second goal
+    second_goal_x = bottom_left_boundary_center_x \
+                  + bottom_left_boundary_height \
+                  + parking_height / 2
+    second_goal_y = bottom_left_boundary_center_y - \
+                        car_config["wheel_base"] / 2
+    second_goal = [second_goal_x, second_goal_y, degToRad(90), 0, 0]
+
+
+    # parameters variation:
+    bottom_left_right_dx = np.linspace(-1, -0.2, 3)
+    road_width = np.linspace(3, 6, 3)
+
+    bottom_left_right_dx_ = -0.05
+    road_width_ = 4.5
+    road_center_y = bottom_road_edge_y + road_width_
+    upper_boundary_center_y = road_center_y + road_width_ + \
+                        upper_boundary_width
+    map_ = [
+            [upper_boundary_center_x, upper_boundary_center_y, 
+            0, upper_boundary_width, upper_boundary_height], 
+            [bottom_left_boundary_center_x + bottom_left_right_dx_, 
+        bottom_left_boundary_center_y, 0, bottom_left_boundary_width,
+            bottom_left_boundary_height],
+            [bottom_right_boundary_center_x - bottom_left_right_dx_, 
+        bottom_right_boundary_center_y, 0, bottom_right_boundary_width, 
+            bottom_right_boundary_height], 
+            [bottom_down_center_x, bottom_down_center_y, 
+            0, bottom_down_width, bottom_down_height]
+            ]
+    for index in range(9):
+        maps["map" + str(index)] = map_
+
+
+    forward_start_x_ = bottom_left_boundary_center_x \
+                                - bottom_left_boundary_height \
+                                + car_config["length"] / 2 \
+                                - car_config["wheel_base"] / 2
+    start_y_on_bottom_lane = bottom_road_edge_y + car_config["width"] / 2 \
+                                + 1.2
+    start_y_on_center = bottom_road_edge_y + road_width
+
+
+    start_pose_1 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
+    dyn_obst_1 = []
+    task_1 = [(
+                start_pose_1,
+                second_goal,
+                dyn_obst_1
+             )]
+    start_pose_2 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
+    dyn_obst_2 = []
+    task_2 = [(
+                start_pose_2,
+                second_goal,
+                dyn_obst_2
+             )]
+    start_pose_3 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
+    dyn_obst_3 = []
+    task_3 = [(
+                start_pose_3,
+                second_goal,
+                dyn_obst_3
+             )]
+    start_pose_4 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
+    dyn_obst_4 = []
+    task_4 = [(
+                start_pose_4,
+                second_goal,
+                dyn_obst_4
+             )]
+
+    ##dyn_obst_y = [buttom_road_edge_y + road_width + 0.5 * road_width,
+    #                    buttom_road_edge_y + road_width, 
+    #                    buttom_road_edge_y + 0.5 * road_width]         
+    start_pose_5 = [forward_start_x_, start_y_on_center, 0, 0, 0]
+    dyn_obst_5 = [forward_start_x_ + 10, 
+                  bottom_road_edge_y + 0.5 * road_width, 
+                  radToDeg(180), 0.5, 0, 0]
+    task_5 = [(
+                start_pose_5,
+                second_goal,
+                dyn_obst_5
+             )]
+    start_pose_6 = [forward_start_x_, start_y_on_center, 0, 0, 0]
+    dyn_obst_6 = [forward_start_x_ + 10, 
+                  bottom_road_edge_y + road_width + 0.5 * road_width, 
+                  radToDeg(180), 0.5, 0, 0]
+    task_6 = [(
+                start_pose_6,
+                second_goal,
+                dyn_obst_6
+             )]
+    start_pose_7 = [forward_start_x_, start_y_on_center, 0, 0, 0]
+    dyn_obst_7 = []
+    task_7 = [(
+                start_pose_7,
+                second_goal,
+                dyn_obst_7
+             )]
+    start_pose_8 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
+    dyn_obst_8 = []
+    task_8 = [(
+                start_pose_8,
+                second_goal,
+                dyn_obst_8
+             )]
+    start_pose_9 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
+    dyn_obst_9 = []
+    task_9 = [(
+                start_pose_9,
+                second_goal,
+                dyn_obst_9
+             )]
+
+
+    tasks = [task_1, task_2, task_3, task_4, 
+             task_5, task_6, task_7, task_8, task_9]
+    for index, task_ in enumerate(tasks):
+        valTasks["map" + str(index)] = task_
+
+
+    dataSet["empty"] = (maps, trainTask, valTasks)
+    return dataSet, second_goal
+
+
+def generateDataSet(our_env_config, car_config):
+    dataSet = {}
+    maps = {} 
+    trainTask = {}
+    valTasks = {}
     if our_env_config["dynamic"]: 
         dynamic = True
     else: 
@@ -182,12 +331,6 @@ def generateDataSet(our_env_config, car_config):
     if our_env_config['validate_custom_case']:
         bottom_left_right_dx_ = 0.1
         road_width_ = 5
-        # parameters variation:
-        #bottom_left_right_dx = np.linspace(0.1, 0.25, 3)
-        #road_width = np.linspace(2.2, 3, 3)
-        #bottom_left_right_dx = np.linspace(-0.8, 0, 3)
-        #road_width = np.linspace(3, 5, 3)
-        #boundaries
         parking_height = 2.7
         parking_width = 4.5
         bottom_left_boundary_width = parking_width / 2
@@ -200,7 +343,8 @@ def generateDataSet(our_env_config, car_config):
                     + bottom_right_boundary_height
         bottom_left_boundary_center_y = -5.5 # init value
         bottom_right_boundary_center_y = bottom_left_boundary_center_y
-        bottom_road_edge_y = bottom_left_boundary_center_y + bottom_left_boundary_width
+        bottom_road_edge_y = bottom_left_boundary_center_y + \
+                        bottom_left_boundary_width
         upper_boundary_width = 2 # any value
         upper_boundary_height = 17 # any value
         bottom_down_width = upper_boundary_width 
@@ -215,69 +359,60 @@ def generateDataSet(our_env_config, car_config):
         second_goal_x = bottom_left_boundary_center_x \
                     + bottom_left_boundary_height \
                     + parking_height / 2
-        second_goal_y = bottom_left_boundary_center_y - car_config["wheel_base"] / 2
+        second_goal_y = bottom_left_boundary_center_y - \
+                        car_config["wheel_base"] / 2
         second_goal = [second_goal_x, second_goal_y, degToRad(90), 0, 0]
 
 
 
         index = 0
         road_center_y = bottom_road_edge_y + road_width_
-        upper_boundary_center_y = road_center_y + road_width_ + upper_boundary_width
+        upper_boundary_center_y = road_center_y + \
+                        road_width_ + upper_boundary_width
         if our_env_config['static']:
             maps["map" + str(index)] = [
-                                    [upper_boundary_center_x, upper_boundary_center_y, 
-                                        0, upper_boundary_width, upper_boundary_height], 
-                                    [bottom_left_boundary_center_x + bottom_left_right_dx_, 
-                                    bottom_left_boundary_center_y, 0, bottom_left_boundary_width,
-                                    bottom_left_boundary_height],
-                                    [bottom_right_boundary_center_x - bottom_left_right_dx_, 
-                                    bottom_right_boundary_center_y, 0, bottom_right_boundary_width, 
-                                    bottom_right_boundary_height], 
-                                    [bottom_down_center_x, bottom_down_center_y, 
-                                    0, bottom_down_width, bottom_down_height]
+                            [upper_boundary_center_x, upper_boundary_center_y, 
+                                0, upper_boundary_width, upper_boundary_height], 
+                            [bottom_left_boundary_center_x + bottom_left_right_dx_, 
+                    bottom_left_boundary_center_y, 0, bottom_left_boundary_width,
+                            bottom_left_boundary_height],
+                            [bottom_right_boundary_center_x - bottom_left_right_dx_, 
+                    bottom_right_boundary_center_y, 0, bottom_right_boundary_width, 
+                            bottom_right_boundary_height], 
+                            [bottom_down_center_x, bottom_down_center_y, 
+                            0, bottom_down_width, bottom_down_height]
                                     ]
         else:
             maps["map" + str(index)] = []
 
         trainTask["map" + str(index)] = generateTasks(car_config, 
-                                        bottom_left_boundary_center_x,
-                                        bottom_left_boundary_center_y,
-                                        bottom_left_boundary_height,
-                                        parking_height,
-                                        bottom_road_edge_y, 
-                                        road_width_, second_goal, task_difficulty,
-                                        dynamic=dynamic, union=union,
-                                        union_without_forward_task = union_without_forward_task,
-                                        validate_on_train=True)
+                                    bottom_left_boundary_center_x,
+                                    bottom_left_boundary_center_y,
+                                    bottom_left_boundary_height,
+                                    parking_height,
+                                    bottom_road_edge_y, 
+                                    road_width_, second_goal,
+                                    dynamic=dynamic, union=union,
+                        union_without_forward_task = union_without_forward_task,
+                                    validate_on_train=True)
         valTasks["map" + str(index)] = generateTasks(car_config, 
-                                        bottom_left_boundary_center_x,
-                                        bottom_left_boundary_center_y,
-                                        bottom_left_boundary_height,
-                                        parking_height,
-                                        bottom_road_edge_y, 
-                                        road_width_, second_goal, task_difficulty,
-                                        dynamic=dynamic, union=union,
-                                        union_without_forward_task = union_without_forward_task,
-                                        validate_on_train=our_env_config["validate_on_train"])
+                                    bottom_left_boundary_center_x,
+                                    bottom_left_boundary_center_y,
+                                    bottom_left_boundary_height,
+                                    parking_height,
+                                    bottom_road_edge_y, 
+                                    road_width_, second_goal,
+                                    dynamic=dynamic, union=union,
+                        union_without_forward_task = union_without_forward_task,
+                            validate_on_train=our_env_config["validate_on_train"])
 
         dataSet["empty"] = (maps, trainTask, valTasks)
 
         return dataSet, second_goal
 
-
-
     # parameters variation:
-    if our_env_config["easy_map_constraints"]:
-        bottom_left_right_dx = np.linspace(-0.8, 0, 3)
-        road_width = np.linspace(3, 5, 3)
-    elif our_env_config["medium_map_constraints"]:
-        bottom_left_right_dx = np.linspace(-1, 0.25, 3)
-        road_width = np.linspace(2.2, 3, 3)
-    elif our_env_config["hard_map_constraints"]:
-        #bottom_left_right_dx = np.linspace(0.1, 0.25, 3)
-        #road_width = np.linspace(2.6, 6, 3)
-        bottom_left_right_dx = np.linspace(-1, -0.2, 3)
-        road_width = np.linspace(3, 6, 3)
+    bottom_left_right_dx = np.linspace(-1, -0.2, 3)
+    road_width = np.linspace(3, 6, 3)
         
     #boundaries
     parking_height = 2.7
@@ -292,7 +427,8 @@ def generateDataSet(our_env_config, car_config):
                 + bottom_right_boundary_height
     bottom_left_boundary_center_y = -5.5 # init value
     bottom_right_boundary_center_y = bottom_left_boundary_center_y
-    bottom_road_edge_y = bottom_left_boundary_center_y + bottom_left_boundary_width
+    bottom_road_edge_y = bottom_left_boundary_center_y + \
+                    bottom_left_boundary_width
     #upper_boundary_width = 2 # any value
     upper_boundary_width = 0.5 # any value
     upper_boundary_height = 17 
@@ -309,7 +445,8 @@ def generateDataSet(our_env_config, car_config):
     second_goal_x = bottom_left_boundary_center_x \
                   + bottom_left_boundary_height \
                   + parking_height / 2
-    second_goal_y = bottom_left_boundary_center_y - car_config["wheel_base"] / 2
+    second_goal_y = bottom_left_boundary_center_y - \
+                        car_config["wheel_base"] / 2
     second_goal = [second_goal_x, second_goal_y, degToRad(90), 0, 0]
     #set tasks
     index = 0
@@ -317,44 +454,45 @@ def generateDataSet(our_env_config, car_config):
         for road_width_ in road_width:
 
             road_center_y = bottom_road_edge_y + road_width_
-            upper_boundary_center_y = road_center_y + road_width_ + upper_boundary_width
+            upper_boundary_center_y = road_center_y + road_width_ + \
+                                upper_boundary_width
             
             if our_env_config['static']:
                 maps["map" + str(index)] = [
-                                        [upper_boundary_center_x, upper_boundary_center_y, 
-                                            0, upper_boundary_width, upper_boundary_height], 
-                                        [bottom_left_boundary_center_x + bottom_left_right_dx_, 
-                                        bottom_left_boundary_center_y, 0, bottom_left_boundary_width,
-                                        bottom_left_boundary_height],
-                                        [bottom_right_boundary_center_x - bottom_left_right_dx_, 
-                                        bottom_right_boundary_center_y, 0, bottom_right_boundary_width, 
-                                        bottom_right_boundary_height], 
-                                        [bottom_down_center_x, bottom_down_center_y, 
-                                        0, bottom_down_width, bottom_down_height]
+                            [upper_boundary_center_x, upper_boundary_center_y, 
+                                0, upper_boundary_width, upper_boundary_height], 
+                            [bottom_left_boundary_center_x + bottom_left_right_dx_, 
+                    bottom_left_boundary_center_y, 0, bottom_left_boundary_width,
+                            bottom_left_boundary_height],
+                            [bottom_right_boundary_center_x - bottom_left_right_dx_, 
+                    bottom_right_boundary_center_y, 0, bottom_right_boundary_width, 
+                            bottom_right_boundary_height], 
+                            [bottom_down_center_x, bottom_down_center_y, 
+                            0, bottom_down_width, bottom_down_height]
                                         ]
             else:
                 maps["map" + str(index)] = []
 
             trainTask["map" + str(index)] = generateTasks(car_config, 
-                                            bottom_left_boundary_center_x,
-                                            bottom_left_boundary_center_y,
-                                            bottom_left_boundary_height,
-                                            parking_height,
-                                            bottom_road_edge_y, 
-                                            road_width_, second_goal, task_difficulty,
-                                            dynamic=dynamic, union=union, 
-                                            union_without_forward_task = union_without_forward_task,
-                                            validate_on_train=True)
+                                    bottom_left_boundary_center_x,
+                                    bottom_left_boundary_center_y,
+                                    bottom_left_boundary_height,
+                                    parking_height,
+                                    bottom_road_edge_y, 
+                                    road_width_, second_goal,
+                                    dynamic=dynamic, union=union, 
+                        union_without_forward_task = union_without_forward_task,
+                                    validate_on_train=True)
             valTasks["map" + str(index)] = generateTasks(car_config, 
-                                            bottom_left_boundary_center_x,
-                                            bottom_left_boundary_center_y,
-                                            bottom_left_boundary_height,
-                                            parking_height,
-                                            bottom_road_edge_y, 
-                                            road_width_, second_goal, task_difficulty,
-                                            dynamic=dynamic, union=union,
-                                            union_without_forward_task = union_without_forward_task,
-                                            validate_on_train=our_env_config["validate_on_train"])
+                                    bottom_left_boundary_center_x,
+                                    bottom_left_boundary_center_y,
+                                    bottom_left_boundary_height,
+                                    parking_height,
+                                    bottom_road_edge_y, 
+                                    road_width_, second_goal,
+                                    dynamic=dynamic, union=union,
+                        union_without_forward_task = union_without_forward_task,
+                            validate_on_train=our_env_config["validate_on_train"])
 
             index += 1
 
@@ -505,7 +643,7 @@ def generateTasks(config,
                 bottom_left_boundary_height, 
                 parking_height, 
                 buttom_road_edge_y,
-                road_width, second_goal, task_difficulty,
+                road_width, second_goal,
                 dynamic, union, union_without_forward_task,
                 validate_on_train=False):
                                  

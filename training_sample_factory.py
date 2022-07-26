@@ -24,6 +24,7 @@ from sample_factory.envs.env_registry import global_env_registry
 from sample_factory.run_algorithm import run_algorithm
 
 from policy_gradient.utlis import generateDataSet
+from policy_gradient.utlis import generateTestDataSet
 from EnvLib.ObstGeomEnvSampleFactory import *
 from utils_SF.residual_net import ResnetEncoder
 
@@ -83,11 +84,13 @@ def custom_parse_args(argv=None, evaluation=False):
     cfg.use_wandb = use_wandb
     cfg.with_wandb = use_wandb
     
-
     return cfg
 
 def make_custom_env_func(full_env_name, cfg=None, env_config=None):
-    dataSet, second_goal = generateDataSet(our_env_config, car_config)
+    
+    #dataSet, second_goal = generateDataSet(our_env_config, car_config)
+    dataSet, second_goal = generateTestDataSet(our_env_config, car_config)
+
     maps, trainTask, valTasks = dataSet["empty"]
   
     if our_env_config["union"]:

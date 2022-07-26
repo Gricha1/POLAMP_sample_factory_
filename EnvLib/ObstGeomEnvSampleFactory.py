@@ -439,7 +439,9 @@ class ObsEnvironment(gym.Env):
         self.maps = dict(self.maps_init)
         if not self.validate_env:
             self.obst_random_actions = np.random.choice([True, 
-                                                    False, False, False, False])
+                                                False, False, False, False])
+        else:
+            self.obst_random_actions = False
         self.stepCounter = 0
         self.last_observations = []
         self.last_action = [0., 0.]
@@ -505,7 +507,6 @@ class ObsEnvironment(gym.Env):
     
         return observation
     
-
     
     def __reward(self, current_state, new_state, goalReached, 
                 collision, overSpeeding, overSteering):
