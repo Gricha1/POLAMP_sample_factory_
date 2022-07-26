@@ -2,12 +2,10 @@ from asyncio import tasks
 import sys
 import time
 from collections import deque
-
 import numpy as np
 import torch
 import wandb
-#sys.path.insert(0, "sample-factory/")
-#sys.path.insert(0, "../")
+
 from sample_factory.algorithms.appo.actor_worker import transform_dict_observations
 from sample_factory.algorithms.appo.learner import LearnerWorker
 from sample_factory.algorithms.appo.model import create_actor_critic

@@ -13,42 +13,49 @@ import gym
 import wandb
 import yaml
 import numpy as np
+import json
 from torch import nn
 sys.path.insert(0, "sample-factory/")
+sys.path.insert(0, "../")
 from sample_factory.algorithms.utils.arguments import arg_parser, parse_args
 from sample_factory.algorithms.appo.model_utils import register_custom_encoder, EncoderBase, get_obs_shape, nonlinearity
 from sample_factory.algorithms.utils.algo_utils import EXTRA_PER_POLICY_SUMMARIES
 from sample_factory.envs.env_registry import global_env_registry
 from sample_factory.run_algorithm import run_algorithm
 
-
-#from sample-factory.sample_factory.algorithms.utils.arguments import arg_parser, parse_args
-#from sample-factory.sample_factory.algorithms.appo.model_utils import register_custom_encoder, EncoderBase, get_obs_shape, nonlinearity
-#from sample-factory.sample_factory.algorithms.utils.algo_utils import EXTRA_PER_POLICY_SUMMARIES
-#from sample-factory.sample_factory.envs.env_registry import global_env_registry
-#from sample-factory.sample_factory.run_algorithm import run_algorithm
-sys.path.insert(0, "../")
+from policy_gradient.utlis import generateDataSet
 from EnvLib.ObstGeomEnvSampleFactory import *
 from utils_SF.residual_net import ResnetEncoder
+
 use_wandb = True
 
+with open("configs/train_configs.json", 'r') as f:
+    train_config = json.load(f)
+
+with open("configs/environment_configs.json", 'r') as f:
+    our_env_config = json.load(f)
+
+with open("configs/reward_weight_configs.json", 'r') as f:
+    reward_config = json.load(f)
+
+with open("configs/car_configs.json", 'r') as f:
+    car_config = json.load(f)
+
+
 def custom_parse_args(argv=None, evaluation=False):
-    """
-    Parse default SampleFactory arguments and add user-defined arguments on top.
-    Allow to override argv for unit tests. Default value (None) means use sys.argv.
-    Setting the evaluation flag to True adds additional CLI arguments for evaluating the policy (see the enjoy_ script).
-    """
+
     parser = arg_parser(argv, evaluation=evaluation)
 
     # add custom args here
     parser.add_argument('--my_custom_arg', type=int, 
                     default=42, help='Any custom arguments users might define')
-    # SampleFactory parse_args function does some additional processing (see comments there)
     cfg = parse_args(argv=argv, evaluation=evaluation, parser=parser)
     cfg.evaluation = evaluation
     
-    cfg.rollout = 512
-    cfg.recurrence = 128
+    #cfg.rollout = 512
+    #cfg.recurrence = 128
+    cfg.rollout = 32
+    cfg.recurrence = 32
     
     cfg.encoder_type = 'conv'
     cfg.encoder_subtype = 'convnet_simple'
@@ -82,31 +89,7 @@ def custom_parse_args(argv=None, evaluation=False):
 def make_custom_env_func(full_env_name, cfg=None, env_config=None):
     dataSet, second_goal = generateDataSet(our_env_config, car_config)
     maps, trainTask, valTasks = dataSet["empty"]
-    #maps, trainTask, valTasks = dataSet["obstacles"]
-    # maps, trainTask, valTasks = dataSet["dyn_obstacles"]
-    
-    # if not our_env_config["empty"]:
-    #     maps = maps_obst
-    #     trainTask = trainTask_obst
-    #     valTasks = valTasks_obst
-    # if not our_env_config["obstacles"]:
-    #     maps = maps_dyn_obst
-    #     trainTask = trainTask_dyn_obst
-    #     valTasks = valTasks_dyn_obst
-    '''
-    environment_config = {
-        'vehicle_config': car_config,
-        'tasks': trainTask,
-        'valTasks': valTasks,
-        'maps': maps,
-        'our_env_config' : our_env_config,
-        'reward_config' : reward_config,
-        'evaluation': cfg.evaluation,
-    }
-    '''
-
-    #vehicle_config = VehicleConfig(car_config)
-
+  
     if our_env_config["union"]:
         environment_config = {
             'car_config': car_config,
@@ -130,15 +113,11 @@ def make_custom_env_func(full_env_name, cfg=None, env_config=None):
         }
 
     cfg.other_keys = environment_config
-    # if not use_wandb:
-    #     print(f"cfg {cfg}")
+
     return ObsEnvironment(full_env_name, cfg['other_keys'])
 
 
 def add_extra_params_func(env, parser):
-    """
-    Specify any additional command line arguments for this family of custom environments.
-    """
     p = parser
 
 def override_default_params_func(env, parser):
@@ -161,44 +140,10 @@ def register_custom_components():
     EXTRA_PER_POLICY_SUMMARIES.append(polamp_extra_summaries)
     register_custom_encoder('custom_env_encoder', ResnetEncoder)
 
-import json
-from policy_gradient.curriculum_train import generateDataSet
-
-
-with open("configs/train_configs.json", 'r') as f:
-    train_config = json.load(f)
-
-with open("configs/environment_configs.json", 'r') as f:
-    our_env_config = json.load(f)
-    # print(our_env_config)
-
-with open("configs/reward_weight_configs.json", 'r') as f:
-    reward_config = json.load(f)
-
-with open("configs/car_configs.json", 'r') as f:
-    car_config = json.load(f)
-
-'''
-with open("../configs/train_configs.json", 'r') as f:
-    train_config = json.load(f)
-
-with open("../configs/environment_configs.json", 'r') as f:
-    our_env_config = json.load(f)
-    # print(our_env_config)
-
-with open("../configs/reward_weight_configs.json", 'r') as f:
-    reward_config = json.load(f)
-
-with open("../configs/car_configs.json", 'r') as f:
-    car_config = json.load(f)
-'''
 
 def main():
     register_custom_components()
     cfg = custom_parse_args()
-    #print("############DEBUG###########")
-    #print(f"cfg: {cfg}")
-    #print("############DEBUG###########")
     if use_wandb:
         wandb.init(config=cfg, project='sample-factory-POLAMP', entity='grisha1', 
                     save_code=False, sync_tensorboard=True)
