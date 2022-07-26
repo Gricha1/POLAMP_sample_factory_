@@ -116,14 +116,10 @@ class VehicleConfig:
 
 class ObsEnvironment(gym.Env):
     def __init__(self, full_env_name, config):
-        self.validate_env = env_config = config["validate_env"]
-        if self.validate_env:
-            print("DEBUG: VALIDATE ENV")
         self.gear_switch_penalty = True
         self.RS_reward = True
         self.adding_ego_features = True
         self.adding_dynamic_features = True
-        self.debug_save = False
         self.gridCount = 4
         self.grid_resolution = 4
         self.grid_shape = (120, 120)
@@ -132,6 +128,9 @@ class ObsEnvironment(gym.Env):
 
         self.name = full_env_name
         env_config = config["our_env_config"]
+        self.validate_env = env_config["validate_env"]
+        if self.validate_env:
+            print("DEBUG: VALIDATE ENV")
         self.reward_config = config["reward_config"]
         self.goal = None
         self.current_state = None
