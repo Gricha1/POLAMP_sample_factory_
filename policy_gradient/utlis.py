@@ -270,7 +270,7 @@ def generateTestDataSet(our_env_config, car_config):
              )]
 
     start_pose_7 = [forward_start_x_, start_y_on_center, 0, 0, 0]
-    dyn_obst_7 = [forward_start_x_ - 10, 
+    dyn_obst_7 = [forward_start_x_ - 7, 
                   start_y_on_center, 
                   0, 0.5, 0]
     task_7 = [(
