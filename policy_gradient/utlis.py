@@ -194,8 +194,7 @@ def generateTestDataSet(our_env_config, car_config):
             [bottom_down_center_x, bottom_down_center_y, 
             0, bottom_down_width, bottom_down_height]
             ]
-    for index in range(9):
-        maps["map" + str(index)] = map_
+    
 
 
     forward_start_x_ = bottom_left_boundary_center_x \
@@ -214,6 +213,7 @@ def generateTestDataSet(our_env_config, car_config):
                 second_goal,
                 dyn_obst_1
              )]
+             
     start_pose_2 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
     dyn_obst_2 = []
     task_2 = [(
@@ -221,6 +221,7 @@ def generateTestDataSet(our_env_config, car_config):
                 second_goal,
                 dyn_obst_2
              )]
+
     start_pose_3 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
     dyn_obst_3 = []
     task_3 = [(
@@ -228,6 +229,7 @@ def generateTestDataSet(our_env_config, car_config):
                 second_goal,
                 dyn_obst_3
              )]
+
     start_pose_4 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
     dyn_obst_4 = []
     task_4 = [(
@@ -248,6 +250,7 @@ def generateTestDataSet(our_env_config, car_config):
                 second_goal,
                 dyn_obst_5
              )]
+
     start_pose_6 = [forward_start_x_, start_y_on_center, 0, 0, 0]
     dyn_obst_6 = [forward_start_x_ + 10, 
                   bottom_road_edge_y + road_width + 0.5 * road_width, 
@@ -257,6 +260,7 @@ def generateTestDataSet(our_env_config, car_config):
                 second_goal,
                 dyn_obst_6
              )]
+
     start_pose_7 = [forward_start_x_, start_y_on_center, 0, 0, 0]
     dyn_obst_7 = []
     task_7 = [(
@@ -264,6 +268,7 @@ def generateTestDataSet(our_env_config, car_config):
                 second_goal,
                 dyn_obst_7
              )]
+
     start_pose_8 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
     dyn_obst_8 = []
     task_8 = [(
@@ -271,6 +276,7 @@ def generateTestDataSet(our_env_config, car_config):
                 second_goal,
                 dyn_obst_8
              )]
+
     start_pose_9 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
     dyn_obst_9 = []
     task_9 = [(
@@ -283,6 +289,7 @@ def generateTestDataSet(our_env_config, car_config):
     tasks = [task_1, task_2, task_3, task_4, 
              task_5, task_6, task_7, task_8, task_9]
     for index, task_ in enumerate(tasks):
+        maps["map" + str(index)] = map_
         valTasks["map" + str(index)] = task_
 
 
