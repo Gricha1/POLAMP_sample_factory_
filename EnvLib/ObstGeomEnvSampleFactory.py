@@ -496,7 +496,10 @@ class ObsEnvironment(gym.Env):
             self.obstacle_map = self.maps[self.map_key]
             tasks = self.valTasks[self.map_key]
             self.setTask(tasks, idx, self.obstacle_map, rrt)
-        
+
+        #DEBUG
+        print("DEBUG dynamic:", self.dynamic_obstacles)
+
         for obstacle in self.obstacle_map:
             obs = State(obstacle[0], obstacle[1], obstacle[2], 0, 0)
             width = obstacle[3]
