@@ -480,6 +480,8 @@ class ObsEnvironment(gym.Env):
                 self.stop_dynamic_step = 500
                 if val_key == "map0":
                     self.stop_dynamic_step = 50
+                elif val_key == "map1":
+                    self.stop_dynamic_step = 50
         #DEBUG
         print("DEBUG:", val_key, self.stop_dynamic_step)
 
@@ -662,6 +664,15 @@ class ObsEnvironment(gym.Env):
         if constant_forward:
             a = 0
             Eps = 0
+        if self.validate_env and self.validateTestDataset and \
+                self.stepCounter >= self.stop_dynamic_step:
+            a = 0
+            Eps = 0
+        elif self.validate_env and self.validateTestDataset and \
+                (self.stepCounter + 10) >= self.stop_dynamic_step:
+            a = -1
+            Eps = 0
+
         dV = a * dt
         V = state.v + dV
         overSpeeding = V > self.vehicle.max_vel or V < self.vehicle.min_vel
