@@ -756,7 +756,8 @@ class ObsEnvironment(gym.Env):
         #collision = temp_grid_obst[self.grid_agent == 1].sum() > 0
         #DEBUG
         collision = temp_grid_obst[self.grid_agent == 1].sum() > 3
-        collision = collision or (self.grid_agent.sum() == 0)
+        #collision = collision or (self.grid_agent.sum() == 0)
+        collision = False
         if collision:
             print("DEBUG COLLISION:", 
                 temp_grid_obst[self.grid_agent == 1].sum())
