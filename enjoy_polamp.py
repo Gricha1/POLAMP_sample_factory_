@@ -27,6 +27,7 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
     debug_dynamic = False
     debug_dataset = False
     debug_speed = False
+    debug_testdataset = True
     #DEBUG have to set assert on union tasks
     if use_wandb:
         wandb.init(project='validate_polamp', entity='grisha1')
@@ -93,7 +94,7 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
         print("DEBUG val:")
         print(env.valTasks.keys())
         for val_key in env.valTasks:
-            if debug_dataset:
+            if debug_dataset or debug_testdataset:
                 total_tasks = 100
             if debug_speed:
                 #print("DEBUG map:", env.valTasks.keys())
@@ -103,7 +104,11 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
             #        continue
             count_map += 1
             eval_tasks = len(env.valTasks[val_key])
-            print("Num map:", count_map, "out of", len(env.valTasks), "count task:", eval_tasks)
+            print("Num map:", count_map, "out of", len(env.valTasks), 
+                    "count task:", eval_tasks)
+            if debug_testdataset:
+                if count_map < 5:
+                    continue
             if debug_dataset:
                 if count_map < 7:
                     continue
@@ -161,9 +166,6 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
                     while not done[0]:
                         if max_frames_reached(num_frames):
                             break
-                        # print(f"num_frames: {num_frames}")
-                        # print(f"done: {done}")
-                        #print("DEBUG len obs:", obs[0].shape)
                         obs_torch = AttrDict(transform_dict_observations(obs))
                         for key, x in obs_torch.items():
                             obs_torch[key] = torch.from_numpy(x).to(device).float()

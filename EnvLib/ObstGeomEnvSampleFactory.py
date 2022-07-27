@@ -436,6 +436,10 @@ class ObsEnvironment(gym.Env):
         else:
             current, goal = self.generateSimpleTask(obstacles)
 
+        #DEBUG
+        print("DEBUG:", current)
+        print("DEBUG:", goal)
+
         self.current_state, self.goal = self.transformTask(current, goal, 
                                             obstacles, self.dynamic_obstacles)
         self.old_state = self.current_state
