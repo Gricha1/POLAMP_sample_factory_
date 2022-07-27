@@ -424,9 +424,13 @@ class ObsEnvironment(gym.Env):
                 current, goal = current_task
             else:
                 current, goal, dynamic_obstacles = current_task
+                #DEBUG
+                print("DEBUG dyn obst:", dynamic_obstacles)
                 if not rrt:
+                    #DEBUG
                     print('DEBUG: USE random for dataset')
                     if (np.random.randint(3) > 0):
+                        #DEBUG
                         print("DEBUG: there is dyn obst")
                         for dyn_obst in dynamic_obstacles:
                             self.dynamic_obstacles.append(dyn_obst)
