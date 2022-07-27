@@ -144,9 +144,6 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
                     else:
                         saved_last_image = False
 
-                #if debug_dataset:    
-                #    if np.random.random() > 0.2:
-                #        continue
                 start_time = time.time()
                 obs = env.reset(idx=id, fromTrain=False, val_key=val_key)
 
@@ -155,7 +152,6 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
                 rnn_states = torch.zeros([env.num_agents, get_hidden_size(cfg)], dtype=torch.float32, device=device)
                 episode_reward = np.zeros(env.num_agents)
                 finished_episode = [False] * env.num_agents
-                # print(f"max_num_frames: {max_num_frames}")
                 done = [False]
                 images = []
                 images_observ = []

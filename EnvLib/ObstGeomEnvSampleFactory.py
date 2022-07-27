@@ -129,8 +129,11 @@ class ObsEnvironment(gym.Env):
         self.name = full_env_name
         env_config = config["our_env_config"]
         self.validate_env = env_config["validate_env"]
+        self.validateTestDataset = env_config["validateTestDataset"]
         if self.validate_env:
             print("DEBUG: VALIDATE ENV")
+            if self.validateTestDataset:
+                print("DEBUG: VALIDATE TEST DATASET")
         self.reward_config = config["reward_config"]
         self.goal = None
         self.current_state = None
@@ -426,8 +429,6 @@ class ObsEnvironment(gym.Env):
                 current, goal, dynamic_obstacles = current_task
                 if not rrt:
                     if (np.random.randint(3) > 0):
-                        #DEBUG
-                        #print("DEBUG: there is dyn obst")
                         for dyn_obst in dynamic_obstacles:
                             self.dynamic_obstacles.append(dyn_obst)
                             self.dynamic_obstacles_v_s.append(0)
@@ -475,7 +476,13 @@ class ObsEnvironment(gym.Env):
         self.vehicle.prev_gear = None
         if self.validate_env:
             rrt = True
-            
+            if self.validateTestDataset:
+                self.stop_dynamic_step = 500
+                if val_key == "map0":
+                    self.stop_dynamic_step = 50
+        #DEBUG
+        print("DEBUG:", val_key, self.stop_dynamic_step)
+
         if fromTrain:
             index = np.random.randint(len(self.lst_keys))
             self.map_key = self.lst_keys[index]

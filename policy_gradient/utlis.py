@@ -207,10 +207,13 @@ def generateTestDataSet(our_env_config, car_config):
 
 
     start_pose_1 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
-    dyn_obst_1 = []
+    dyn_obst_1 = [forward_start_x_ + 20, 
+                  bottom_road_edge_y + road_width_ + 0.5 * road_width_, 
+                  degToRad(180), 0.5, 0]
     task_1 = [(
                 start_pose_1,
-                second_goal
+                second_goal,
+                [dyn_obst_1]
              )]
              
     start_pose_2 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
