@@ -669,7 +669,7 @@ class ObsEnvironment(gym.Env):
             a = 0
             Eps = 0
         elif self.validate_env and self.validateTestDataset and \
-                (self.stepCounter + 10) >= self.stop_dynamic_step:
+                (self.stepCounter + 5) >= self.stop_dynamic_step:
             a = -1
             Eps = 0
 
