@@ -424,11 +424,7 @@ class ObsEnvironment(gym.Env):
                 current, goal = current_task
             else:
                 current, goal, dynamic_obstacles = current_task
-                #DEBUG
-                print("DEBUG dyn obst:", dynamic_obstacles)
                 if not rrt:
-                    #DEBUG
-                    print('DEBUG: USE random for dataset')
                     if (np.random.randint(3) > 0):
                         #DEBUG
                         print("DEBUG: there is dyn obst")
@@ -507,8 +503,7 @@ class ObsEnvironment(gym.Env):
             self.task = 1 #forward task
         else:
             self.task = -1 #backward task
-        print("DEBUG:", self.current_state.x, self.current_state.y)
-        print("DEBUG:", self.goal.x, self.goal.y)
+
         self.start_dist = self.__goalDist(self.current_state)
 
         self.last_images = []
