@@ -203,7 +203,7 @@ def generateTestDataSet(our_env_config, car_config):
                                 - car_config["wheel_base"] / 2
     start_y_on_bottom_lane = bottom_road_edge_y + car_config["width"] / 2 \
                                 + 1.2
-    start_y_on_center = bottom_road_edge_y + road_width
+    start_y_on_center = bottom_road_edge_y + road_width_
 
 
     start_pose_1 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
@@ -240,7 +240,7 @@ def generateTestDataSet(our_env_config, car_config):
     start_pose_5 = [forward_start_x_, start_y_on_center, 0, 0, 0]
     dyn_obst_5 = [forward_start_x_ + 10, 
                   bottom_road_edge_y + 0.5 * road_width, 
-                  radToDeg(180), 0.5, 0, 0]
+                  radToDeg(180), 0.5, 0]
     task_5 = [(
                 start_pose_5,
                 second_goal,
@@ -250,7 +250,7 @@ def generateTestDataSet(our_env_config, car_config):
     start_pose_6 = [forward_start_x_, start_y_on_center, 0, 0, 0]
     dyn_obst_6 = [forward_start_x_ + 10, 
                   bottom_road_edge_y + road_width + 0.5 * road_width, 
-                  radToDeg(180), 0.5, 0, 0]
+                  radToDeg(180), 0.5, 0]
     task_6 = [(
                 start_pose_6,
                 second_goal,
