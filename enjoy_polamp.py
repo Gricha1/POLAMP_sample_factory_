@@ -18,7 +18,7 @@ from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
 
 
-def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
+def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
     save_image = True
     save_obs = False
     done_save_img = False

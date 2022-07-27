@@ -477,7 +477,7 @@ class ObsEnvironment(gym.Env):
         if self.validate_env:
             rrt = True
             if self.validateTestDataset:
-                self.stop_dynamic_step = 900
+                self.stop_dynamic_step = 1200
                 if val_key == "map0" or val_key == "map2":
                     self.stop_dynamic_step = 100
                 elif val_key == "map1" or val_key == "map3":
