@@ -88,8 +88,8 @@ def custom_parse_args(argv=None, evaluation=False):
 
 def make_custom_env_func(full_env_name, cfg=None, env_config=None):
     
-    dataSet, second_goal = generateDataSet(our_env_config, car_config)
-    #dataSet, second_goal = generateTestDataSet(our_env_config, car_config)
+    #dataSet, second_goal = generateDataSet(our_env_config, car_config)
+    dataSet, second_goal = generateTestDataSet(our_env_config, car_config)
 
     maps, trainTask, valTasks = dataSet["empty"]
   
