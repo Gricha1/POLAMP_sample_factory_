@@ -344,7 +344,8 @@ class ObsEnvironment(gym.Env):
         
         return delta
 
-    def transformTask(self, from_state, goal_state, obstacles, dynamic_obstacles=[]):
+    def transformTask(self, from_state, goal_state, 
+                        obstacles, dynamic_obstacles=[]):
         
         if self.affine_transform:
             sx, sy, stheta, sv, sst = from_state
@@ -376,18 +377,22 @@ class ObsEnvironment(gym.Env):
             new_obstacle_map = []
             for index in range(len(obstacles)):
                 state = obstacles[index]
-                new_obstacle_map.append([state[0], state[1],  state[2], state[3], state[4]])
+                new_obstacle_map.append([state[0], state[1],  
+                            state[2], state[3], state[4]])
             self.obstacle_map = new_obstacle_map
 
             new_dyn_obstacles = []
             for index in range(len(dynamic_obstacles)):
                 state = dynamic_obstacles[index]
-                new_dyn_obstacles.append(State(state[0], state[1], state[2], state[3], state[4]))
+                new_dyn_obstacles.append(State(state[0], state[1], 
+                            state[2], state[3], state[4]))
                 
             self.dynamic_obstacles = new_dyn_obstacles
 
-        start = State(start_transform[0], start_transform[1], start_transform[2], start_transform[3], start_transform[4])
-        goal = State(goal_transform[0], goal_transform[1], goal_transform[2], goal_transform[3], goal_transform[4])
+        start = State(start_transform[0], start_transform[1], 
+            start_transform[2], start_transform[3], start_transform[4])
+        goal = State(goal_transform[0], goal_transform[1], 
+            goal_transform[2], goal_transform[3], goal_transform[4])
         
         return start, goal 
 

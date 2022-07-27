@@ -210,32 +210,28 @@ def generateTestDataSet(our_env_config, car_config):
     dyn_obst_1 = []
     task_1 = [(
                 start_pose_1,
-                second_goal,
-                [dyn_obst_1]
+                second_goal
              )]
              
     start_pose_2 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
     dyn_obst_2 = []
     task_2 = [(
                 start_pose_2,
-                second_goal,
-                [dyn_obst_2]
+                second_goal
              )]
 
     start_pose_3 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
     dyn_obst_3 = []
     task_3 = [(
                 start_pose_3,
-                second_goal,
-                [dyn_obst_3]
+                second_goal
              )]
 
     start_pose_4 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
     dyn_obst_4 = []
     task_4 = [(
                 start_pose_4,
-                second_goal,
-                [dyn_obst_4]
+                second_goal
              )]
 
     ##dyn_obst_y = [buttom_road_edge_y + road_width + 0.5 * road_width,
@@ -265,24 +261,21 @@ def generateTestDataSet(our_env_config, car_config):
     dyn_obst_7 = []
     task_7 = [(
                 start_pose_7,
-                second_goal,
-                [dyn_obst_7]
+                second_goal
              )]
 
     start_pose_8 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
     dyn_obst_8 = []
     task_8 = [(
                 start_pose_8,
-                second_goal,
-                [dyn_obst_8]
+                second_goal
              )]
 
     start_pose_9 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
     dyn_obst_9 = []
     task_9 = [(
                 start_pose_9,
-                second_goal,
-                [dyn_obst_9]
+                second_goal
              )]
 
 
