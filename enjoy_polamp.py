@@ -107,7 +107,7 @@ def enjoy(init_cfg, max_num_frames=900, use_wandb=True):
             print("Num map:", count_map, "out of", len(env.valTasks), 
                     "count task:", eval_tasks)
             if debug_testdataset:
-                if count_map < 1:
+                if count_map < 7:
                     continue
             if debug_dataset:
                 if count_map < 7:
