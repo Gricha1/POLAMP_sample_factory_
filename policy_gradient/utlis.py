@@ -177,7 +177,7 @@ def generateTestDataSet(our_env_config, car_config):
     bottom_left_right_dx = np.linspace(-1, -0.2, 3)
     road_width = np.linspace(3, 6, 3)
 
-    bottom_left_right_dx_ = -0.05
+    bottom_left_right_dx_ = -0.15
     road_width_ = 3
     road_center_y = bottom_road_edge_y + road_width_
     upper_boundary_center_y = road_center_y + road_width_ + \
