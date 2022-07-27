@@ -501,7 +501,8 @@ class ObsEnvironment(gym.Env):
             self.task = 1 #forward task
         else:
             self.task = -1 #backward task
-        print("DEBUG:". self.current_state, self.goal)
+        print("DEBUG:", self.current_state.x, self.current_state.y)
+        print("DEBUG:", self.goal.x, self.goal.y)
         self.start_dist = self.__goalDist(self.current_state)
 
         self.last_images = []
