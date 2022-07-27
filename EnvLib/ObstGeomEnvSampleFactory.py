@@ -481,7 +481,7 @@ class ObsEnvironment(gym.Env):
                 if val_key == "map0":
                     self.stop_dynamic_step = 100
                 elif val_key == "map1":
-                    self.stop_dynamic_step = 50
+                    self.stop_dynamic_step = 110
         #DEBUG
         print("DEBUG:", val_key, self.stop_dynamic_step)
 
