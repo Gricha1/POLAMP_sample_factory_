@@ -425,7 +425,9 @@ class ObsEnvironment(gym.Env):
             else:
                 current, goal, dynamic_obstacles = current_task
                 if not rrt:
+                    print('DEBUG: USE random for dataset')
                     if (np.random.randint(3) > 0):
+                        print("DEBUG: there is dyn obst")
                         for dyn_obst in dynamic_obstacles:
                             self.dynamic_obstacles.append(dyn_obst)
                             self.dynamic_obstacles_v_s.append(0)
@@ -435,10 +437,6 @@ class ObsEnvironment(gym.Env):
                         self.dynamic_obstacles_v_s.append(0)
         else:
             current, goal = self.generateSimpleTask(obstacles)
-
-        #DEBUG
-        print("DEBUG:", current)
-        print("DEBUG:", goal)
 
         self.current_state, self.goal = self.transformTask(current, goal, 
                                             obstacles, self.dynamic_obstacles)
