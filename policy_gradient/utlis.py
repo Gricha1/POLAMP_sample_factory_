@@ -290,7 +290,7 @@ def generateTestDataSet(our_env_config, car_config):
              task_5, task_6, task_7, task_8, task_9]
     for index, task_ in enumerate(tasks):
         maps["map" + str(index)] = map_
-        valTasks["map" + str(index)] = task_
+        trainTask["map" + str(index)] = task_
 
 
     dataSet["empty"] = (maps, trainTask, valTasks)
