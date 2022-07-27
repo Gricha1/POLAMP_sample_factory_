@@ -427,7 +427,7 @@ class ObsEnvironment(gym.Env):
                 if not rrt:
                     if (np.random.randint(3) > 0):
                         #DEBUG
-                        print("DEBUG: there is dyn obst")
+                        #print("DEBUG: there is dyn obst")
                         for dyn_obst in dynamic_obstacles:
                             self.dynamic_obstacles.append(dyn_obst)
                             self.dynamic_obstacles_v_s.append(0)
@@ -473,7 +473,9 @@ class ObsEnvironment(gym.Env):
 
         self.vehicle.gear = None
         self.vehicle.prev_gear = None
-
+        if self.validate_env:
+            rrt = True
+            
         if fromTrain:
             index = np.random.randint(len(self.lst_keys))
             self.map_key = self.lst_keys[index]
