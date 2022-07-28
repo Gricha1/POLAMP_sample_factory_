@@ -428,7 +428,8 @@ class ObsEnvironment(gym.Env):
             else:
                 current, goal, dynamic_obstacles = current_task
                 if not rrt:
-                    if (np.random.randint(3) > 0):
+                    #if (np.random.randint(3) > 0):
+                    if (np.random.randint(5) > 0):
                         for dyn_obst in dynamic_obstacles:
                             self.dynamic_obstacles.append(dyn_obst)
                             self.dynamic_obstacles_v_s.append(0)
@@ -501,7 +502,7 @@ class ObsEnvironment(gym.Env):
             self.setTask(tasks, idx, self.obstacle_map, rrt)
 
         #DEBUG
-        print("DEBUG dynamic:", self.dynamic_obstacles)
+        #print("DEBUG dynamic:", self.dynamic_obstacles)
 
         for obstacle in self.obstacle_map:
             obs = State(obstacle[0], obstacle[1], obstacle[2], 0, 0)
@@ -758,9 +759,9 @@ class ObsEnvironment(gym.Env):
         #collision = temp_grid_obst[self.grid_agent == 1].sum() > 3
         collision = collision or (self.grid_agent.sum() == 0)
         #collision = False
-        if collision:
-            print("DEBUG COLLISION:", 
-                temp_grid_obst[self.grid_agent == 1].sum())
+        #if collision:
+        #    print("DEBUG COLLISION:", 
+        #        temp_grid_obst[self.grid_agent == 1].sum())
         end_time = time.time()
 
 
