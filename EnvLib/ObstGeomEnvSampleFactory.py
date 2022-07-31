@@ -235,7 +235,7 @@ class ObsEnvironment(gym.Env):
             self.map_key = self.lst_keys[index]
             self.obstacle_map = self.maps[self.map_key]
 
-    def update_initialization_tasks(self, maps, trainTask, 
+    def update_task(self, maps, trainTask, 
                                     valTasks, second_goal):
         self.trainTasks = trainTask
         self.valTasks = valTasks
@@ -537,7 +537,8 @@ class ObsEnvironment(gym.Env):
         if self.unionTask:    
             if self.union_without_forward_task:
                 self.first_goal_reached = True
-                assert len(self.second_goal) == 5, "second goal not initilized"
+                assert isinstance(self.second_goal, State), \
+                    "second goal is not initilized"
                 self.goal = self.second_goal
             else:
                 self.first_goal_reached = False
