@@ -736,8 +736,7 @@ class ObsEnvironment(gym.Env):
         return new_state, overSpeeding, overSteering, v_s
 
 
-    def step(self, action, next_dyn_states=[]):
-        # print(f"action: {action}")
+    def step(self, action, next_dyn_states=[]):        
         info = {}
         isDone = False
         new_state, overSpeeding, overSteering = \
@@ -773,7 +772,7 @@ class ObsEnvironment(gym.Env):
             
             
         self.current_state = new_state
-        self.last_action = action
+        self.last_action = [self.vehicle.a, self.vehicle.Eps]
 
         
         observation = self.get_observation()
@@ -897,7 +896,8 @@ class ObsEnvironment(gym.Env):
             self.drawObstacles(agentBB)
             plt.arrow(dyn_obst.x, dyn_obst.y, 2 * math.cos(dyn_obst.theta), 2 * math.sin(dyn_obst.theta), head_width=0.5, color='magenta')
         
-        ax.plot([self.current_state.x, self.goal.x], [self.current_state.y, self.goal.y], '--r')
+        ax.plot([self.current_state.x, self.goal.x], 
+            [self.current_state.y, self.goal.y], '--r')
 
         center_state = self.vehicle.shift_state(self.current_state)
         agentBB = self.getBB(center_state)
@@ -936,8 +936,6 @@ class ObsEnvironment(gym.Env):
         Eps = self.vehicle.Eps
         v_s = self.vehicle.v_s
         a = self.vehicle.a
-        #j_a = self.vehicle.j_a
-        #j_Eps = self.vehicle.j_Eps
 
         reeshep_dist = 0
         if self.RS_reward and not self.new_RS is None:
