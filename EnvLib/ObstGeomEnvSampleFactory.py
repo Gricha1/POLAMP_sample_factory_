@@ -207,11 +207,14 @@ class ObsEnvironment(gym.Env):
                not self.unionTask and not self.union_without_forward_task, \
                f"forgot without forward task"
         if self.unionTask:
-                self.second_goal = State(config["second_goal"][0], 
-                                config["second_goal"][1],
-                                config["second_goal"][2],
-                                config["second_goal"][3],
-                                config["second_goal"][4])
+                if len(config["second_goal"]) != 0 :
+                    self.second_goal = State(config["second_goal"][0], 
+                                    config["second_goal"][1],
+                                    config["second_goal"][2],
+                                    config["second_goal"][3],
+                                    config["second_goal"][4])
+                else:
+                    self.second_goal = None
         assert self.hard_constraints \
             + self.medium_constraints \
             + self.soft_constraints == 1, "custom assert: only one constraint is acceptable"
@@ -226,11 +229,34 @@ class ObsEnvironment(gym.Env):
                                             dtype=np.float32)
         self.action_space = gym.spaces.Box(low=np.array([-1, -1]), 
                             high=np.array([1, 1]), dtype=np.float32)
+        if len(self.maps) != 0:
+            self.lst_keys = list(self.maps.keys())
+            index = np.random.randint(len(self.lst_keys))
+            self.map_key = self.lst_keys[index]
+            self.obstacle_map = self.maps[self.map_key]
+
+    def update_initialization_tasks(self, maps, trainTask, 
+                                    valTasks, second_goal):
+        self.trainTasks = trainTask
+        self.valTasks = valTasks
+        self.maps_init = maps
+        self.maps = dict(maps)
+
         self.lst_keys = list(self.maps.keys())
         index = np.random.randint(len(self.lst_keys))
         self.map_key = self.lst_keys[index]
         self.obstacle_map = self.maps[self.map_key]
-            
+
+        if self.unionTask:
+                if len(second_goal) != 0 :
+                    self.second_goal = State(second_goal[0], 
+                                    second_goal[1],
+                                    second_goal[2],
+                                    second_goal[3],
+                                    second_goal[4])
+                else:
+                    self.second_goal = None
+
     def getBB(self, state, width=2.0, length=3.8, ego=True):
         x = state.x
         y = state.y
@@ -325,7 +351,6 @@ class ObsEnvironment(gym.Env):
                     relevant_obstacles.append(new_segments_with_angle)
                     
         return relevant_obstacles
-
 
     def getDiff(self, state):
         if self.goal is None:
@@ -512,6 +537,7 @@ class ObsEnvironment(gym.Env):
         if self.unionTask:    
             if self.union_without_forward_task:
                 self.first_goal_reached = True
+                assert len(self.second_goal) == 5, "second goal not initilized"
                 self.goal = self.second_goal
             else:
                 self.first_goal_reached = False
