@@ -176,7 +176,7 @@ class ObsEnvironment(gym.Env):
         self.use_acceleration_penalties = env_config['use_acceleration_penalties']
         self.use_velocity_goal_penalty = env_config['use_velocity_goal_penalty']
         self.use_different_acc_penalty = env_config['use_different_acc_penalty']
-        self._max_episode_steps = env_config['max_polamp_steps']
+        self.max_episode_steps = env_config['max_polamp_steps']
         self.dynamic_obstacles = []
         self.dynamic_obstacles_v_s = []
         self.dyn_acc = 0
@@ -769,12 +769,10 @@ class ObsEnvironment(gym.Env):
                 dynamic_obstacles_v_s.append(new_v_s)
             self.dynamic_obstacles = dynamic_obstacles
             self.dynamic_obstacles_v_s = dynamic_obstacles_v_s
-            
-            
+                        
         self.current_state = new_state
         self.last_action = [self.vehicle.a, self.vehicle.Eps]
 
-        
         observation = self.get_observation()
 
         #collision
@@ -789,7 +787,6 @@ class ObsEnvironment(gym.Env):
         #    print("DEBUG COLLISION:", 
         #        temp_grid_obst[self.grid_agent == 1].sum())
         end_time = time.time()
-
 
         self.collision_time += (end_time - start_time)
         end_time = time.time()
@@ -821,11 +818,10 @@ class ObsEnvironment(gym.Env):
         else:
             reward = 0
         
-
         if not (self.stepCounter % self.UPDATE_SPARSE):
             self.old_state = self.current_state
         self.stepCounter += 1
-        if goalReached or collision or (self._max_episode_steps == self.stepCounter):
+        if goalReached or collision or (self.max_episode_steps == self.stepCounter):
             if self.unionTask:
                 if goalReached:  
                     if not self.first_goal_reached:
@@ -839,15 +835,29 @@ class ObsEnvironment(gym.Env):
                         isDone = True
                         if collision:
                             info["Collision"] = True
+                        elif goalReached:
+                            info["OK"] = True
+                        else:
+                            info["Max steps reached"] = True
                 else:
                     isDone = True
                     if collision:
                         info["Collision"] = True
+                    else:
+                        info["Max episode reached"] = True
             else:
                 isDone = True
                 if collision:
                     info["Collision"] = True
-        
+                else:
+                    info["Max episode reached"] = True
+            info["terminal_last_action"] = self.last_action
+            info["terminal_x"] = self.current_state.x
+            info["terminal_y"] = self.current_state.y
+            info["terminal_v"] = self.current_state.v
+            info["terminal_steer"] = self.current_state.steer
+            info["terminal_heading"] = self.current_state.theta
+
         self.vehicle.prev_a = self.vehicle.a
         self.vehicle.prev_Eps = self.vehicle.Eps
         
@@ -919,13 +929,6 @@ class ObsEnvironment(gym.Env):
         ax.arrow(self.goal.x, self.goal.y, goal_heading.x,
                  goal_heading.y, width=0.1, head_width=0.3, color='cyan')
 
-        #for angle in self.angle_space:
-        #    position = Vec2d(self.current_state.x, self.current_state.y)
-        #    heading = Vec2d(cos(self.current_state.theta), sin(self.current_state.theta))
-        #    heading = Ray(position, heading).rotate(angle).heading * self.__sendBeam(self.current_state, angle)
-
-        #    ax.arrow(position.x, position.y, heading.x, heading.y, color='yellow')
-
         dx = self.goal.x - self.current_state.x
         dy = self.goal.y - self.current_state.y
         ds =  math.hypot(dx, dy)
@@ -948,22 +951,11 @@ class ObsEnvironment(gym.Env):
                     [st[1] for st in self.new_RS[0]])
         else:
             reeshep_dist = 0
-        #print("RS diff:", self.RS_diff)
         
-        #ax.set_title(
-        #    f'$dx={dx:.1f}, dy={dy:.1f}, E={Eps:.2f}, v_s={v_s:.2f}, \
-        #    phi={theta:.0f}^\\circ, v={v:.2f} \, m/s, \
-        #    steer={delta:.0f}^\\circ, a = {a:.2f}, m/s^2, r={reward:.0f}, \
-        #    j_a = {j_a:.2f}, j_Eps = {j_Eps:.2f}$')
-        #print("DEBUG", dx, dy, j_a, j_Eps, a, Eps)
-        #ax.set_title(f'$dx={dx:.1f}, dy={dy:.1f}, j_a = {j_a:.2f}, j_Eps = {j_Eps:.2f}, a = {a:.2f}, E={Eps:.2f}, r={reward:.0f}$')
-        #ax.set_title(f'$dx={dx:.1f}, dy={dy:.1f}, a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, r={reward:.0f}, RS_d={reeshep_dist:.1f}$')
         ax.set_title(f'$step = {step_count:.0f}, ds = {ds:.1f}, gear = {self.vehicle.gear}, steer={delta:.0f}$ \n $\\theta = {theta:.0f}^\\circ, a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, r={reward:.0f}, RS_d={reeshep_dist:.1f}$')
         
-        
-        
         if save_image:
-            fig.canvas.draw()  # draw the canvas, cache the renderer
+            fig.canvas.draw()
             image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
             image = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
             #image = image.reshape(1600, 2000, 3)
@@ -972,7 +964,6 @@ class ObsEnvironment(gym.Env):
         else:
             plt.pause(0.1)
             plt.show()
-            # plt.close('all')
 
     def close(self):
         pass

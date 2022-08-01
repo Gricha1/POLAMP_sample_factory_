@@ -40,7 +40,7 @@
     "medium_map_constraints": 0,
     "hard_map_constraints": 1,
     "validate_custom_case" : 0,
-    "validate_env": 0,
+    "validate_env": 1,
     "validateTestDataset": 0,
     "easy_task_difficulty": 0,
     "medium_task_difficulty": 0,

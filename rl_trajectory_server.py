@@ -36,8 +36,11 @@ def my_process():
 
   env.update_task(map_, trainTask, valTask, second_goal)
 
-  trajectory_info = run_algorithm(cfg, env, agent, max_steps=600)
+  trajectory_info, run_info = run_algorithm(cfg, env, agent, 
+                        max_steps=env.max_episode_steps)
 
-  return(json.dumps(trajectory_info))
-
+  respond_ = {"trajectory": trajectory_info, "run_info": run_info}
+  
+  return(json.dumps(respond_))
+  
 run(host='172.17.0.2', port=8080, debug=True)

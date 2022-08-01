@@ -2,10 +2,9 @@ load("@rules_python//python:defs.bzl", "py_binary", "py_library")
 
 package(default_visibility = ["//visibility:public"])
 
-
 py_library(
-    name = "agent_env_creater",
-    srcs = ["agent_env_creater.py"],
+    name = "init_global_env_agent",
+    srcs = ["init_global_env_agent.py"],
     deps = [
     ],
 )
