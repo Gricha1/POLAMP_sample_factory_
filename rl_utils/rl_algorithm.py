@@ -21,6 +21,8 @@ def run_algorithm(cfg, env, agent, max_steps=30):
         trajectory_info["steer"] = []
         trajectory_info["accelerations"] = []
         trajectory_info["heading"] = []
+        trajectory_info["w"] = []
+        trajectory_info["v_s"] = []
 
         id = 0
         start_time = time.time()
@@ -89,6 +91,8 @@ def run_algorithm(cfg, env, agent, max_steps=30):
                         trajectory_info["v"].append(np.float64(env.current_state.v))
                         trajectory_info["steer"].append(np.float64(env.current_state.steer))
                         trajectory_info["heading"].append(np.float64(env.current_state.theta))
+                        trajectory_info["w"].append(np.float64(env.vehicle.w))
+                        trajectory_info["v_s"].append(np.float64(env.vehicle.v_s))
                     else: # add terminal state, because after env.step, env resets in wrapper
                         trajectory_info["accelerations"].append(np.float64(info[0]["terminal_last_action"][0]))
                         trajectory_info["x"].append(np.float64(info[0]["terminal_x"]))
@@ -96,6 +100,9 @@ def run_algorithm(cfg, env, agent, max_steps=30):
                         trajectory_info["v"].append(np.float64(info[0]["terminal_v"]))
                         trajectory_info["steer"].append(np.float64(info[0]["terminal_steer"]))
                         trajectory_info["heading"].append(np.float64(info[0]["terminal_heading"]))
+                        trajectory_info["w"].append(np.float64(info[0]["terminal_w"]))
+                        trajectory_info["v_s"].append(np.float64(info[0]["terminal_v_s"]))
+                        
 
             if "Collision" in info[0]:
                 run_info = "Collision"

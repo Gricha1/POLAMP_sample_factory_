@@ -857,6 +857,8 @@ class ObsEnvironment(gym.Env):
             info["terminal_v"] = self.current_state.v
             info["terminal_steer"] = self.current_state.steer
             info["terminal_heading"] = self.current_state.theta
+            info["terminal_w"] = self.vehicle.w
+            info["terminal_v_s"] = self.vehicle.v_s
 
         self.vehicle.prev_a = self.vehicle.a
         self.vehicle.prev_Eps = self.vehicle.Eps
