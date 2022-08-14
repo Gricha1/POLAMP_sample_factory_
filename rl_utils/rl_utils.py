@@ -1,4 +1,5 @@
 from math import pi
+from numpy import sqrt
 
 ONE_RAD_GRAD = pi / 180
 
@@ -56,13 +57,6 @@ def generate_map(roi_boundaries, vehicle_pos, parking_pos):
                     (roi_boundaries[4].y - roi_boundaries[3].y) / 2,
                     (roi_boundaries[5].x - roi_boundaries[4].x) / 2
                    ]
-    '''
-    top = [(roi_boundaries[7].x + roi_boundaries[6].x) / 2, 
-            roi_boundaries[7].y + 2,
-            0,
-            2,
-            (roi_boundaries[6].x - roi_boundaries[7].x) / 2]
-    '''
     #DEBUG
     top = [(roi_boundaries[7].x + roi_boundaries[6].x) / 2, 
             roi_boundaries[7].y,
@@ -101,13 +95,25 @@ def create_task(data):
     vehicle_pos = point(data[-2].x, data[-2].y)
     parking_pos = [(data[4].x + data[1].x) / 2, 
                 (data[1].y + data[2].y) / 2 + 1]
+    origin_point_x = data[-1].x
+    origin_point_y = data[-1].y
     dynamic_obsts = []
     for obst in obsts:
+        x = obst.x
+        y = obst.y
+        normalized_x = x - origin_point_x
+        normalized_y = y - origin_point_y
         theta = obst.theta
-        if obst.theta == 0 and obst.v_x <= 0:
-            theta = degToRad(180)
-        dynamic_obsts.append([obst.x - data[-1].x, obst.y - data[-1].y, 
-                                                theta, obst.v_x, 0])
+        v_x = obst.v_x
+        v_y = obst.v_y
+        # correct vector of dynamic velocity sign
+        assert theta >= 0 and theta <= 2 * pi, \
+            f"theta for dynamic obst isn't corrent, \
+                theta is {theta} must be 0 <= <= 2pi" 
+        v = sqrt(v_x * v_x + v_y * v_y)
+        dynamic_obsts.append([normalized_x, 
+                              normalized_y, 
+                              theta, v, 0])
 
     
     print("****************************************")

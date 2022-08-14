@@ -28,7 +28,6 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
     debug_dataset = False
     debug_speed = False
     debug_testdataset = True
-    #DEBUG have to set assert on union tasks
     if use_wandb:
         wandb.init(project='validate_polamp', entity='grisha1')
     i = 0
@@ -43,29 +42,20 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
             log.warning('Not using action repeat!')
             render_action_repeat = 1
         log.debug('Using action repeat %d during evaluation', render_action_repeat)
-
         cfg.env_frameskip = 1  # for evaluation
         cfg.num_envs = 1
-
         def make_env_func(env_config):
             return create_env(cfg.env, cfg=cfg, env_config=env_config)
-
         env = make_env_func(AttrDict({'worker_index': 0, 'vector_index': 0}))
-        # env.seed(0)
-
         is_multiagent = is_multiagent_env(env)
         if not is_multiagent:
             env = MultiAgentWrapper(env)
-
         if hasattr(env.unwrapped, 'reset_on_init'):
             # reset call ruins the demo recording for VizDoom
             env.unwrapped.reset_on_init = False
-
         actor_critic = create_actor_critic(cfg, env.observation_space, env.action_space)
-
         device = torch.device('cpu' if cfg.device == 'cpu' else 'cuda')
         actor_critic.model_to_device(device)
-
         policy_id = cfg.policy_index
         checkpoints = LearnerWorker.get_checkpoints(LearnerWorker.checkpoint_dir(cfg, policy_id))
         checkpoint_dict = LearnerWorker.load_checkpoint(checkpoints, device)
@@ -79,16 +69,10 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
 
         def max_frames_reached(frames):
             return max_num_frames is not None and frames > max_num_frames
-
-        # obs = env.reset()
-        # val_key = env.valTasks
-        # print(f"val_key: {val_key}")
         successed_tasks = 0
         max_steps_tasks = 0
         collision_tasks = 0
         total_tasks = 0
-        # print(f"env.valTasks: {env.valTasks}")
-        # print(f"env.maps: {env.maps}")
         start_time = time.time()
         count_map = 0
         print("DEBUG val:")
@@ -162,8 +146,6 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                         obs_torch = AttrDict(transform_dict_observations(obs))
                         for key, x in obs_torch.items():
                             obs_torch[key] = torch.from_numpy(x).to(device).float()
-                        #print(f"obs_torch: {obs_torch}")
-                        #print(f"rnn_states: {rnn_states}")
                         policy_outputs = actor_critic(obs_torch, rnn_states, with_action_distribution=True)
 
                         # sample actions from the distribution by default

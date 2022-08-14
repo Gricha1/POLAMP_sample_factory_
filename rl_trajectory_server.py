@@ -4,11 +4,16 @@ import sys
 import argparse
 from bottle import run, post, request, response
 from policy_gradient.utlis import generateTestDataSet
-
 sys.path.insert(0, "sample-factory/")
-
 from rl_utils.init_global_env_agent import init_global_env_agent
 from rl_utils.rl_algorithm import run_algorithm
+
+use_wandb = True
+if use_wandb:
+  import wandb
+  wandb.init(project='validate_polamp', entity='grisha1')
+else:
+  wandb = None
 
 env, agent, cfg = init_global_env_agent()
 
@@ -37,7 +42,7 @@ def my_process():
   env.update_task(map_, trainTask, valTask, second_goal)
 
   trajectory_info, run_info = run_algorithm(cfg, env, agent, 
-                        max_steps=env.max_episode_steps)
+                        max_steps=env.max_episode_steps, wandb=wandb)
 
   respond_ = {"trajectory": trajectory_info, "run_info": run_info}
   

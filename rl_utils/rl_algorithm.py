@@ -8,7 +8,13 @@ from sample_factory.algorithms.appo.actor_worker import transform_dict_observati
 from sample_factory.algorithms.appo.model_utils import get_hidden_size
 from sample_factory.utils.utils import log, AttrDict
 
-def run_algorithm(cfg, env, agent, max_steps=30):
+def run_algorithm(cfg, env, agent, max_steps=30, wandb=None):
+    use_wandb_debug = False
+    if wandb is None:
+        use_wandb_debug = False
+    else:
+        use_wandb_debug = True
+        step_images = []
     trajectory_info = {}
     device = torch.device('cpu' if cfg.device == 'cpu' else 'cuda')
     print("run info:")
@@ -37,24 +43,12 @@ def run_algorithm(cfg, env, agent, max_steps=30):
         trajectory_info["steer"].append(np.float64(env.current_state.steer))
         trajectory_info["heading"].append(np.float64(env.current_state.theta))
 
-        images = []
-        images_observ = []
         cumul_reward = 0 
         num_frames = 0
         done = [False]
         run_info = "OK"
         with torch.no_grad():
             while not done[0]:
-                #if num_frames != 0:
-                    #Dx = trajectory_info["x"][num_frames] - \
-                    #            trajectory_info["x"][num_frames - 1]
-                    #Dy = trajectory_info["y"][num_frames] - \
-                    #            trajectory_info["y"][num_frames - 1]
-                    #if Dx != 0:
-                    #    trajectory_info["heading"].append(np.arctan(Dy / Dx))
-                    #else:
-                    #    trajectory_info["heading"].append(1.5)
-
                 obs_torch = AttrDict(transform_dict_observations(obs))
                 for key, x in obs_torch.items():
                     obs_torch[key] = torch.from_numpy(x).to(device).float()
@@ -102,18 +96,16 @@ def run_algorithm(cfg, env, agent, max_steps=30):
                         trajectory_info["heading"].append(np.float64(info[0]["terminal_heading"]))
                         trajectory_info["w"].append(np.float64(info[0]["terminal_w"]))
                         trajectory_info["v_s"].append(np.float64(info[0]["terminal_v_s"]))
-                        
+
+                    if use_wandb_debug:
+                        step_image = env.render(reward=0)
+                        step_images.append(step_image)
 
             if "Collision" in info[0]:
                 run_info = "Collision"
             elif "Max steps reached" in info[0]:
                 run_info = "Max steps reached"
-
-            #DEBUG
-            #print("terminal v:", env.current_state.v)
-            #print("terminal prev a:", env.last_action[0])
-            ######
-            
+          
             env.close()
         # append agent action to the previous state
         trajectory_info["accelerations"].append(0)
@@ -122,4 +114,12 @@ def run_algorithm(cfg, env, agent, max_steps=30):
         print("run spended time:", abs(end_time - start_time))
         print("run trajectory len:", len(trajectory_info["x"]))
         print("run status:", run_info)
+
+        if use_wandb_debug:
+            step_images = np.transpose(np.array(step_images), axes=[0, 3, 1, 2])
+            print("DEBUG img:", step_images.shape)
+            print("get video", end=" ")
+            wandb.log({f"Val_trajectory_": wandb.Video(step_images, 
+                                        fps=10, format="gif")})
+
     return trajectory_info, run_info

@@ -11,7 +11,6 @@ import yaml
 from torch import nn
 import numpy as np
 import torch
-
 from sample_factory.algorithms.appo.actor_worker import transform_dict_observations
 from sample_factory.algorithms.appo.learner import LearnerWorker
 from sample_factory.algorithms.appo.model import create_actor_critic
@@ -27,7 +26,6 @@ from sample_factory.algorithms.appo.model_utils import register_custom_encoder, 
 from sample_factory.algorithms.utils.algo_utils import EXTRA_PER_POLICY_SUMMARIES
 from sample_factory.envs.env_registry import global_env_registry
 from sample_factory.run_algorithm import run_algorithm
-
 from EnvLib.ObstGeomEnvSampleFactory import *
 from utils_SF.residual_net import ResnetEncoder
 
@@ -168,7 +166,6 @@ def init_global_env_agent():
         env = MultiAgentWrapper(env)
 
     if hasattr(env.unwrapped, 'reset_on_init'):
-        # reset call ruins the demo recording for VizDoom
         env.unwrapped.reset_on_init = False
 
     actor_critic = create_actor_critic(cfg, env.observation_space, 
