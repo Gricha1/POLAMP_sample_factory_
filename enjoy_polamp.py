@@ -5,7 +5,6 @@ from collections import deque
 import numpy as np
 import torch
 import wandb
-
 from sample_factory.algorithms.appo.actor_worker import transform_dict_observations
 from sample_factory.algorithms.appo.learner import LearnerWorker
 from sample_factory.algorithms.appo.model import create_actor_critic
@@ -16,7 +15,6 @@ from sample_factory.algorithms.utils.arguments import parse_args, load_from_chec
 from sample_factory.algorithms.utils.multi_agent_wrapper import MultiAgentWrapper, is_multiagent_env
 from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
-
 
 def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
     save_image = True
@@ -51,7 +49,6 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
         if not is_multiagent:
             env = MultiAgentWrapper(env)
         if hasattr(env.unwrapped, 'reset_on_init'):
-            # reset call ruins the demo recording for VizDoom
             env.unwrapped.reset_on_init = False
         actor_critic = create_actor_critic(cfg, env.observation_space, env.action_space)
         device = torch.device('cpu' if cfg.device == 'cpu' else 'cuda')
@@ -81,11 +78,7 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
             if debug_dataset or debug_testdataset:
                 total_tasks = 100
             if debug_speed:
-                #print("DEBUG map:", env.valTasks.keys())
                 val_key = np.random.choice(list(env.valTasks.keys()))
-            #if debug_dataset:
-            #    if np.random.random() > 0.3:
-            #        continue
             count_map += 1
             eval_tasks = len(env.valTasks[val_key])
             print("Num map:", count_map, "out of", len(env.valTasks), 
@@ -96,7 +89,6 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
             if debug_dataset:
                 if count_map < 7:
                     continue
-            #total_tasks += eval_tasks
             id_start_forward = 0
             id_start_backward = 36
             if debug_forward_move is None:
@@ -110,8 +102,6 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                     id_start = id_start_backward
                     id_end = eval_tasks
             total_tasks += id_end - id_start
-            #if debug_dataset:
-            #    total_tasks = 100
 
             id = id_start
             saved_last_image = False
@@ -167,36 +157,24 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                                 time_wait = target_delay - current_delay
 
                                 if time_wait > 0:
-                                    # log.info('Wait time %.3f', time_wait)
                                     time.sleep(time_wait)
 
                                 last_render_start = time.time()
-                                # image = env.render()
-                                # images.append(image)
 
                             obs, rew, done, infos = env.step(actions)
-                            # print(f"infos: {infos}")
-                            # print(f"done: {done}")
+
                             if debug_dynamic:
-                                #print("dyn vector:", obs[0].shape)
-                                #print("1 dyn:", obs[0][2, 1, 0:4])
-                                #print("2 dyn:", obs[0][2, 2, 0:4])
-                                #print("debug count:", obs[0][1][obs[0][1] == 2].sum())
                                 print("Debug values:", np.unique(obs[0][0]))
                             if save_image:
-                                #images.append(env.image_obs(validate=True))
-                                #print("DEBUG rew", rew)
                                 cumul_reward += rew[0]
                                 image = env.render(reward=cumul_reward)
                                 images.append(image)
-                                #print("DEBUG img:", image.shape)
                             if save_obs:
                                 obs_img = np.expand_dims(env.grid_static_obst * 255, axis=2)
                                 ag_img = np.expand_dims(env.grid_agent * 255, axis=2)
                                 dyn_img = np.expand_dims(env.grid_dynamic_obst * 255, axis=2)
                                 image = np.concatenate((obs_img, ag_img, dyn_img), 
                                                         axis=2)
-                                #print("DEUBG obs:", image.shape)
                                 images_observ.append(image)
 
                             episode_reward += rew
@@ -211,19 +189,11 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                                     rnn_states[agent_i] = torch.zeros([get_hidden_size(cfg)], dtype=torch.float32, device=device)
                                     episode_reward[agent_i] = 0
 
-                            # if episode terminated synchronously for all agents, pause a bit before starting a new one
-                            # if all(done):
-                            #     if not cfg.no_render:
-                            #         image = env.render()
-                            #         images.append(image)
-                                # time.sleep(0.05)
                             episode_done = False
                             if all(finished_episode):
                                 print(f"finished_episode: {finished_episode}")
                                 print(f"infos: {infos}")
                                 if "Collision" in infos[0]:
-                                    # collision = True
-                                    # isDone = False
                                     print("$$ Collision $$")
                                     collision_tasks += 1
                                 elif "SoftEps" in infos[0]:
@@ -247,38 +217,28 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                                             avg_true_reward_str += ', '
                                         avg_true_reward_str += f'#{agent_i}: {avg_true_rew:.3f}'
 
-                                #log.info('Avg episode rewards: %s, true rewards: %s', avg_episode_rewards_str, avg_true_reward_str)
-                                #log.info('Avg episode reward: %.3f, avg true_reward: %.3f', np.mean([np.mean(episode_rewards[i]) for i in range(env.num_agents)]), np.mean([np.mean(true_rewards[i]) for i in range(env.num_agents)]))
-
-                            # VizDoom multiplayer stuff
-                            # for player in [1, 2, 3, 4, 5, 6, 7, 8]:
-                            #     key = f'PLAYER{player}_FRAGCOUNT'
-                            #     if key in infos[0]:
-                            #         log.debug('Score for player %d: %r', player, infos[0][key])
                 done = False
-                if not ("Collision" in infos[0]) and not ("SoftEps" in infos[0]) and num_frames != max_num_frames:
+                if not ("Collision" in infos[0]) and not ("SoftEps" in infos[0]) \
+                    and num_frames != max_num_frames:
                     done = True 
-                if save_image and use_wandb and ((done_save_img and done) or not done_save_img):
+                if save_image and use_wandb and ((done_save_img and done) or \
+                    not done_save_img):
                     print("num frames:", num_frames)
                     images = np.transpose(np.array(images), axes=[0, 3, 1, 2])
                     print("DEBUG img:", images.shape)
                     print("get video", end=" ")
                     wandb.log({f"Val_trajectory_": wandb.Video(images, 
                                                 fps=10, format="gif")})
-                    #images = np.transpose(np.array(images), axes=[0, 1, 1, 2])
-                if save_obs and use_wandb and ((done_save_img and done) or not done_save_img):
-                    #print("DEBUG OBS:", images_observ.shape)
-                    images_observ = np.transpose(np.array(images_observ), axes=[0, 3, 1, 2])
+                if save_obs and use_wandb and ((done_save_img and done) or \
+                                                                not done_save_img):
+                    images_observ = np.transpose(np.array(images_observ), 
+                                                                axes=[0, 3, 1, 2])
                     print("DEBUG obs:", images_observ.shape)
                     wandb.log({f"Obs_trajectory_": wandb.Video(images_observ, 
                                                     fps=10, format="gif")})
                 end_time = time.time()
                 print("spended time:", abs(end_time - start_time))
                 env.close()
-                # images = np.transpose(np.array(images), axes=[0, 3, 1, 2])
-                # if use_wandb and (id == 5 or id ==7):
-                #     wandb.log({f"task_{key}_{id}": wandb.Video(images, fps=10, format="gif")})
-                # print("##### Ending #####")
                 id += 1
 
             if debug_speed:
@@ -293,7 +253,6 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
         print (f"max_step_rate: {max_step_rate}")
         print (f"collision_rate: {collision_rate}")
         if use_wandb:
-            # wandb.log({f"success rate on validation": wandb.Video(val_traj, fps=10, format="gif")})
             wandb.log(
                     {
                     'success_rate': success_rate,
