@@ -3,6 +3,7 @@ import sys
 import time
 from collections import deque
 import numpy as np
+import json
 import torch
 import wandb
 from sample_factory.algorithms.appo.actor_worker import transform_dict_observations
@@ -15,6 +16,9 @@ from sample_factory.algorithms.utils.arguments import parse_args, load_from_chec
 from sample_factory.algorithms.utils.multi_agent_wrapper import MultiAgentWrapper, is_multiagent_env
 from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
+
+with open("configs/validate_config.json", 'r') as f:
+    validate_config = json.load(f)
 
 def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
     save_image = True
@@ -32,15 +36,13 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
     while i < 1:
         if debug_speed:
             i = i + 1            
-
         cfg = load_from_checkpoint(init_cfg)
-
         render_action_repeat = cfg.render_action_repeat if cfg.render_action_repeat is not None else cfg.env_frameskip
         if render_action_repeat is None:
             log.warning('Not using action repeat!')
             render_action_repeat = 1
         log.debug('Using action repeat %d during evaluation', render_action_repeat)
-        cfg.env_frameskip = 1  # for evaluation
+        cfg.env_frameskip = 1 
         cfg.num_envs = 1
         def make_env_func(env_config):
             return create_env(cfg.env, cfg=cfg, env_config=env_config)

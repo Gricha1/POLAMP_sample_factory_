@@ -2,110 +2,7 @@ import torch
 import json
 import os
 import numpy as np
-from EnvLib.ObstGeomEnvSampleFactory import *
-
-def save_configs(config, folder_path, name):
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-    with open(f'{folder_path}/{name}', 'w', encoding='utf-8') as f:
-        json.dump(config, f, ensure_ascii=False, indent=4)
-
-def save_weights(folder_path, model_weights):
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-    torch.save(model_weights, f'{folder_path}/policy.pkl')
- 
-def validate_task(env, agent, max_steps=300, idx=None, save_image=False, val_key=None):
-    agent.config["explore"] = False
-    observation = env.reset(idx=idx, fromTrain=False, val_key=val_key)
-    images = []
-
-    if agent.config["model"]["use_lstm"]:
-        prev_action = list(torch.zeros((2)))
-        state = list(torch.zeros((2,256)))
-    collision = False
-    sum_reward = 0
-    min_distance = float('inf')
-    
-    if save_image:
-        images.append(env.render(sum_reward))
-
-    isDone = False
-    t = 0
-
-    while not isDone and t < max_steps:
-
-
-        if agent.config["model"]["use_lstm"]:
-            action, state, logits = agent.compute_single_action(
-                                                                    observation, 
-                                                                    state=state, 
-                                                                    prev_action=prev_action
-                                                                )
-            prev_action = action
-        else:
-            action = agent.compute_single_action(
-                                                    observation
-                                                )
-        #action[0] = 1.5
-        #action[1] = 1.5
-
-        observation, reward, isDone, info = env.step(action)
-        # print(f'info: {info}')
-        if "EuclideanDistance" in info:
-            if min_distance >= info["EuclideanDistance"]:
-                min_distance = info["EuclideanDistance"]
-
-        sum_reward += reward
-        if save_image:
-            images.append(env.render(sum_reward))
-        t += 1
-
-        if "SoftEps" in info or "Collision" in info:
-            if "Collision" in info:
-                collision = True
-                isDone = False
-            break
-
-    if save_image:
-        images = np.transpose(np.array(images), axes=[0, 3, 1, 2])
-
-    agent.config["explore"] = True
-    #return isDone, images, min_distance, collision, states
-    return isDone, images, min_distance, collision
-
-def validation(env, agent, max_steps):
-    val_done_rate = 0
-    min_total_val_dist = 0
-    val_counter_collision = 0
-    n_vals = 0
-
-    #print("DEBUG:", "env val task:", len(env.valTasks))
-
-    for key in env.valTasks:
-        # print(f'len(env.valTasks[key]): {len(env.valTasks[key])}')
-        #print("DEBUG:", "val one task:", len(env.valTasks[key]))
-        for i in range(len(env.valTasks[key])):
-            # print(key)
-            isDone, val_traj, min_distance, collision = \
-                        validate_task(env, agent, max_steps=max_steps, 
-                                      idx=i, save_image=False, val_key=key)
-            # print(f'collision: {collision}')
-            # print(f'isDone: {isDone}')
-            val_counter_collision += int(collision)
-            val_done_rate += int(isDone)
-            min_total_val_dist += min_distance 
-        n_vals += len(env.valTasks[key])
-
-    if n_vals < 1:
-        n_vals = 1
-    val_done_rate /= n_vals
-    val_done_rate *= 100
-    min_total_val_dist /= n_vals
-    val_counter_collision /= n_vals
-    val_counter_collision *= 100
-
-    return val_done_rate, min_total_val_dist, val_counter_collision, val_traj
+from EnvLib.utils import *
 
 def generateValidateTasks(config):
     min_dist = config['min_dist']
@@ -131,6 +28,65 @@ def generateValidateTasks(config):
 
     return valTasks
 
+def generateValetStaticObsts(parking_height, parking_width, 
+        bottom_left_boundary_height, upper_boundary_width, upper_boundary_height,
+        bottom_left_boundary_center_x, bottom_left_boundary_center_y, road_width_,
+        bottom_left_right_dx_):
+    '''
+
+                            top
+        -----------------------------------------------------
+
+                                            
+                                       
+        -------------------      -----------------------------   
+         left_bottom        |   |     right_bottom
+                            |   |
+                            -----
+                          down_bottom
+    '''         
+    # parking_height * parking_width = parking area
+    bottom_left_boundary_width = parking_width / 2
+    bottom_right_boundary_width = parking_width / 2
+    bottom_right_boundary_height = bottom_left_boundary_height
+    bottom_right_boundary_center_x = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height \
+                + bottom_right_boundary_height
+    bottom_right_boundary_center_y = bottom_left_boundary_center_y
+    bottom_road_edge_y = bottom_left_boundary_center_y + \
+                    bottom_left_boundary_width 
+    bottom_down_width = upper_boundary_width 
+    bottom_down_height = parking_height / 2 
+    upper_boundary_center_x = bottom_left_boundary_center_x \
+                    + bottom_left_boundary_height + parking_height / 2
+    bottom_down_center_x = upper_boundary_center_x
+    bottom_down_center_y = bottom_left_boundary_center_y \
+                - bottom_left_boundary_width - bottom_down_width \
+                - 0.2 # dheight
+    road_center_y = bottom_road_edge_y + road_width_
+    upper_boundary_center_y = road_center_y + road_width_ + \
+                                upper_boundary_width
+
+    left_bottom = [
+                    bottom_left_boundary_center_x + bottom_left_right_dx_, 
+                    bottom_left_boundary_center_y, 0, bottom_left_boundary_width,
+                    bottom_left_boundary_height
+                  ]
+    down_bottom = [
+                    bottom_down_center_x, bottom_down_center_y, 
+                    0, bottom_down_width, bottom_down_height
+                  ]
+    right_bottom = [
+                    bottom_right_boundary_center_x - bottom_left_right_dx_, 
+                    bottom_right_boundary_center_y, 0, bottom_right_boundary_width, 
+                    bottom_right_boundary_height
+                   ]
+    top = [
+            upper_boundary_center_x, upper_boundary_center_y, 
+            0, upper_boundary_width, upper_boundary_height
+          ]
+
+    return [left_bottom, down_bottom, right_bottom, top]
 
 def generateTestDataSet(our_env_config, car_config):
     dataSet = {}
@@ -175,8 +131,11 @@ def generateTestDataSet(our_env_config, car_config):
     bottom_left_right_dx = np.linspace(-1, -0.2, 3)
     road_width = np.linspace(3, 6, 3)
 
-    bottom_left_right_dx_ = -0.2
-    road_width_ = 3
+    #bottom_left_right_dx_ = -0.2
+    #road_width_ = 3
+    bottom_left_right_dx_ = -1.5
+    road_width_ = 5
+    
     road_center_y = bottom_road_edge_y + road_width_
     upper_boundary_center_y = road_center_y + road_width_ + \
                         upper_boundary_width

@@ -51,7 +51,6 @@ def generate_map(roi_boundaries, vehicle_pos, parking_pos):
         parking_height = trained_parking_height
     shift_left_boundary_width = 0
     if trained_parking_width < parking_width:
-        #shift_left_boundary_width = (parking_width - trained_parking_width) / 2
         parking_width = trained_parking_width
     bottom_left_boundary_height = 6 # any value
     upper_boundary_width = 0.5 # any value
@@ -102,38 +101,6 @@ def generate_map(roi_boundaries, vehicle_pos, parking_pos):
             0, upper_boundary_width, upper_boundary_height
           ]
   
-    '''
-    left_bottom = [
-                    (roi_boundaries[1].x + roi_boundaries[0].x) / 2, 
-                    (roi_boundaries[1].y + roi_boundaries[2].y) / 2,
-                    0,
-                    (roi_boundaries[1].y - roi_boundaries[2].y) / 2,
-                    (roi_boundaries[1].x - roi_boundaries[0].x) / 2
-                  ]
-
-    down_bottom = [
-                    (roi_boundaries[3].x + roi_boundaries[2].x) / 2, 
-                    roi_boundaries[2].y - 2,
-                    0,
-                    2,
-                    (roi_boundaries[3].x - roi_boundaries[2].x) / 2 \
-                        + roi_boundaries[5].x - roi_boundaries[4].x
-                  ]
-
-    right_bottom = [
-                    (roi_boundaries[5].x + roi_boundaries[4].x) / 2, 
-                    (roi_boundaries[3].y + roi_boundaries[4].y) / 2,
-                    0,
-                    (roi_boundaries[4].y - roi_boundaries[3].y) / 2,
-                    (roi_boundaries[5].x - roi_boundaries[4].x) / 2
-                   ]
-    top = [(roi_boundaries[7].x + roi_boundaries[6].x) / 2, 
-            roi_boundaries[7].y,
-            0,
-            2,
-            (roi_boundaries[6].x - roi_boundaries[7].x) / 2]
-    '''
-
     start = [vehicle_pos.x, vehicle_pos.y, 
             0, 0., 0]
 

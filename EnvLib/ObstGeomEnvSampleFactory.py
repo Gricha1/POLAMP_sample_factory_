@@ -1,7 +1,5 @@
 import gym
 import matplotlib.pyplot as plt
-#from ray import java_actor_class
-#from scipy.fft import dst
 from planning.generateMap import generateTasks
 from .line import *
 from math import pi
@@ -9,14 +7,12 @@ import numpy as np
 from .Vec2d import Vec2d
 from .utils import *
 from math import cos, sin, tan
-# from copy import deepcopy
 from scipy.spatial import cKDTree
 from planning.utilsPlanning import *
 import time
 import cv2 as cv
-
 from planning.reedShepp import *
-
+from policy_gradient.utlis import *
 
 class State:
     def __init__(self, x, y, theta, v, steer):
@@ -634,19 +630,6 @@ class ObsEnvironment(gym.Env):
             if self.use_different_acc_penalty:
                 reward.append(0)
                 reward.append(0)
-        '''
-        if self.use_acceleration_penalties:
-            reward.append(-abs(self.vehicle.Eps))
-            reward.append(-abs(self.vehicle.a))
-        if self.use_velocity_goal_penalty:
-            if goalReached:
-                reward.append(-abs(new_state.v))
-            else:
-                reward.append(0)
-        if self.use_different_acc_penalty:
-            reward.append(-abs(self.vehicle.a - self.vehicle.prev_a))
-            reward.append(-abs(self.vehicle.Eps - self.vehicle.prev_Eps))
-        '''
         if self.gear_switch_penalty:
             if not(self.vehicle.prev_gear is None) and self.vehicle.prev_gear != self.vehicle.gear:
                 reward.append(-1)
@@ -960,7 +943,6 @@ class ObsEnvironment(gym.Env):
             fig.canvas.draw()
             image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
             image = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-            #image = image.reshape(1600, 2000, 3)
             plt.close('all')
             return image
         else:
@@ -974,6 +956,7 @@ class ObsEnvironment(gym.Env):
         fake_static_obstacles = False
         if len(self.obstacle_segments) == 0:
             fake_static_obstacles = True
+            '''
             parking_height = 2.7
             parking_width = 4.5
             bottom_left_boundary_width = parking_width / 2
@@ -987,11 +970,9 @@ class ObsEnvironment(gym.Env):
             bottom_left_boundary_center_y = -5.5 # init value
             bottom_right_boundary_center_y = bottom_left_boundary_center_y
             bottom_road_edge_y = bottom_left_boundary_center_y + bottom_left_boundary_width
-            #upper_boundary_width = 2 # any value
             upper_boundary_width = 0.5 # any value
             upper_boundary_height = 17 
             bottom_down_width = upper_boundary_width 
-            #bottom_down_height = upper_boundary_height 
             bottom_down_height = parking_height / 2 
             upper_boundary_center_x = bottom_left_boundary_center_x \
                             + bottom_left_boundary_height + parking_height / 2
@@ -1016,18 +997,30 @@ class ObsEnvironment(gym.Env):
                     [bottom_down_center_x, bottom_down_center_y, 
                     0, bottom_down_width, bottom_down_height]
                                 ]
-
+            '''
+            parking_height = 2.7
+            parking_width = 4.5
+            bottom_left_boundary_height = 6
+            upper_boundary_height = 17
+            upper_boundary_width = 0.5
+            bottom_left_boundary_center_x = 5
+            bottom_left_boundary_center_y = -5.5
+            road_width_ = 6
+            bottom_left_right_dx_ = 0.25
+            self.obstacle_map = generateValetStaticObsts(parking_height, parking_width, 
+                        bottom_left_boundary_height, 
+                        upper_boundary_width, upper_boundary_height,
+                        bottom_left_boundary_center_x, 
+                        bottom_left_boundary_center_y, road_width_,
+                        bottom_left_right_dx_)
             for obstacle in self.obstacle_map:
                 obs = State(obstacle[0], obstacle[1], obstacle[2], 0, 0)
                 width = obstacle[3]
                 length = obstacle[4]
                 self.obstacle_segments.append(self.getBB(obs, width=width, length=length, ego=False))
-
         assert len(self.obstacle_segments) > 0, "not static env"
 
-
         grid_resolution = self.grid_resolution
-        #if self.grid_obst is None:
         self.grid_static_obst = np.zeros(self.grid_shape)
         self.grid_dynamic_obst = np.zeros(self.grid_shape)
         self.grid_agent = np.zeros(self.grid_shape)
