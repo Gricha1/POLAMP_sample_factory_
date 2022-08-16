@@ -15,12 +15,10 @@ def save_weights(folder_path, model_weights):
         os.makedirs(folder_path)
     torch.save(model_weights, f'{folder_path}/policy.pkl')
  
-
 def validate_task(env, agent, max_steps=300, idx=None, save_image=False, val_key=None):
     agent.config["explore"] = False
     observation = env.reset(idx=idx, fromTrain=False, val_key=val_key)
     images = []
-    #states = []
 
     if agent.config["model"]["use_lstm"]:
         prev_action = list(torch.zeros((2)))
@@ -245,10 +243,7 @@ def generateTestDataSet(our_env_config, car_config):
                 second_goal,
                 [dyn_obst_4]
              )]
-
-    ##dyn_obst_y = [buttom_road_edge_y + road_width + 0.5 * road_width,
-    #                    buttom_road_edge_y + road_width, 
-    #                    buttom_road_edge_y + 0.5 * road_width]         
+        
     start_pose_5 = [forward_start_x_, start_y_on_center, 0, 0, 0]
     dyn_obst_5 = [forward_start_x_ + 20, 
                   bottom_road_edge_y + 0.5 * road_width_, 
@@ -309,7 +304,6 @@ def generateTestDataSet(our_env_config, car_config):
 
     dataSet["empty"] = (maps, trainTask, valTasks)
     return dataSet, second_goal
-
 
 def generateDataSet(our_env_config, car_config):
     dataSet = {}
@@ -383,8 +377,6 @@ def generateDataSet(our_env_config, car_config):
         second_goal_y = bottom_left_boundary_center_y - \
                         car_config["wheel_base"] / 2
         second_goal = [second_goal_x, second_goal_y, degToRad(90), 0, 0]
-
-
 
         index = 0
         road_center_y = bottom_road_edge_y + road_width_
@@ -473,7 +465,6 @@ def generateDataSet(our_env_config, car_config):
     index = 0
     for bottom_left_right_dx_ in bottom_left_right_dx:
         for road_width_ in road_width:
-
             road_center_y = bottom_road_edge_y + road_width_
             upper_boundary_center_y = road_center_y + road_width_ + \
                                 upper_boundary_width
@@ -741,7 +732,6 @@ def generateTasks(config,
         backward_start_y = np.linspace(forward_end_y[0], 
                                        forward_end_y[1], 5)
 
-
     dataset_info = {
         "forward_start_x": forward_start_x,
         "forward_start_y": forward_start_y,
@@ -755,10 +745,6 @@ def generateTasks(config,
         "road_width": road_width,
         "union_without_forward_task": union_without_forward_task
     }
-
-    #print("debug utils:", "validate forward:", not validate_on_train, 
-    #     len(forward_start_y) * len(forward_end_x) * \
-    #     len(forward_end_y) * len(forward_start_x))
 
     #forward_tasks(3 * 2 * 3 * 3 = 48 tasks)
     for forward_start_y_ in forward_start_y:

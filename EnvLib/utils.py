@@ -89,7 +89,6 @@ def intersectPolygons(a, b, rl=True):
     new_a = []
     if rl:
         for pair in a:
-            # print(pair)
             new_a.append((pair[0].x, pair[0].y))
         a = new_a
         new_b = []
@@ -118,20 +117,3 @@ def intersectPoint(point, polygon, epsilon=1e-4):
         i += 1
 
     return result
-
-# a = [[0, 0], [2, 0], [2, 2], [0, 2]]
-# b = [[1, 1], [3, 0], [3, 5], [1, 6]]
-# c = [[0, 3], [2, 3], [2, 6], [0, 7]]
-
-# print("intersect(a, b): ", intersect(a, b))
-# print("intersect(b, c): ", intersect(b, c))
-# print("intersect(a, c): ", intersect(a, c))
-
-# points = [[0, 0], [0.5, 0.5], [1.5, 1.5], [-1, 0], [1, 5]]
-# for point in points:
-#     print("point:", point, " ", intersectPoint(point, a))
-#     plt.plot(point[0], point[1], "rH")
-# plt.plot([a[(i + 1) % len(a)][0] for i in range(len(a) + 1)], [a[(i + 1) % len(a)][1] for i in range(len(a) + 1)])
-# plt.plot([b[(i + 1) % len(b)][0] for i in range(len(b) + 1)], [b[(i + 1) % len(b)][1] for i in range(len(b) + 1)])
-# plt.plot([c[(i + 1) % len(c)][0] for i in range(len(c) + 1)], [c[(i + 1) % len(c)][1] for i in range(len(c) + 1)])
-# plt.show()
