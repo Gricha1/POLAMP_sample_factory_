@@ -161,7 +161,6 @@ def create_task(data):
 
     generated_map = generate_map(roi_boundary_points, vehicle_pos, parking_pos)
     generated_start = [vehicle_pos.x, vehicle_pos.y, 0, 0., 0]
-    #generated_goal = [parking_pos[0], parking_pos[1] - 2.2, 90 * (pi / 180), 0, 0]
     generated_goal = [parking_pos[0], parking_pos[1] - car_config["wheel_base"] / 2, 
                         90 * (pi / 180), 0, 0]
     generated_task = [generated_start, generated_goal]

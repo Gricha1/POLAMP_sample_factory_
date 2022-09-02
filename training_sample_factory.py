@@ -89,27 +89,27 @@ def custom_parse_args(argv=None, evaluation=False):
 def make_custom_env_func(full_env_name, cfg=None, env_config=None):
     if our_env_config["validate_env"] and our_env_config["validateTestDataset"]:
         dataSet, second_goal = generateTestDataSet(our_env_config, car_config)
-    else:
-        dataSet, second_goal = generateDataSet(our_env_config, car_config)
+    #else:
+    #    dataSet, second_goal = generateDataSet(our_env_config, car_config)
+    generated_tasks = getTrainValidateTasks(train=True)
 
-    maps, trainTask, valTasks = dataSet["empty"]
+    maps, generated_tasks = ChangeTaskFormat(generated_tasks)
+
+    #maps, trainTask, valTasks = dataSet["empty"]
   
     if our_env_config["union"]:
         environment_config = {
             'car_config': car_config,
-            'tasks': trainTask,
-            'valTasks': valTasks,
+            'Tasks': generated_tasks,
             'maps': maps,
             'our_env_config' : our_env_config,
             'reward_config' : reward_config,
             'evaluation': cfg.evaluation,
-            "second_goal" : second_goal
         }
     else:
         environment_config = {
             'car_config': car_config,
-            'tasks': trainTask,
-            'valTasks': valTasks,
+            'Tasks': trainTask,
             'maps': maps,
             'our_env_config' : our_env_config,
             'reward_config' : reward_config,

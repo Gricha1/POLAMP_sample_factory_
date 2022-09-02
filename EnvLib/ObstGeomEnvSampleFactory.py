@@ -140,8 +140,7 @@ class ObsEnvironment(gym.Env):
         self.last_observations = []
         self.stepCounter = 0
         self.vehicle = VehicleConfig(config['car_config'])
-        self.trainTasks = config['tasks']
-        self.valTasks = config['valTasks']
+        self.Tasks = config['Tasks']
         self.maps_init = config['maps']
         self.maps = dict(config['maps'])
         self.alpha = env_config['alpha']
@@ -195,22 +194,6 @@ class ObsEnvironment(gym.Env):
         if self.use_different_acc_penalty:
             self.reward_weights.append(self.reward_config["differ_a"])
             self.reward_weights.append(self.reward_config["differ_Eps"])
-        self.unionTask = env_config['union']
-        self.union_without_forward_task = env_config['union_without_forward_task']
-        assert not(not self.unionTask and self.union_without_forward_task), \
-                "incorrect set union task: without forward but not union"
-        assert self.unionTask and self.union_without_forward_task or \
-               not self.unionTask and not self.union_without_forward_task, \
-               f"forgot without forward task"
-        if self.unionTask:
-                if len(config["second_goal"]) != 0 :
-                    self.second_goal = State(config["second_goal"][0], 
-                                    config["second_goal"][1],
-                                    config["second_goal"][2],
-                                    config["second_goal"][3],
-                                    config["second_goal"][4])
-                else:
-                    self.second_goal = None
         assert self.hard_constraints \
             + self.medium_constraints \
             + self.soft_constraints == 1, "custom assert: only one constraint is acceptable"
@@ -231,10 +214,9 @@ class ObsEnvironment(gym.Env):
             self.map_key = self.lst_keys[index]
             self.obstacle_map = self.maps[self.map_key]
 
-    def update_task(self, maps, trainTask, 
-                                    valTasks, second_goal):
-        self.trainTasks = trainTask
-        self.valTasks = valTasks
+    def update_task(self, maps, Tasks, 
+                    valTasks, second_goal):
+        self.Tasks = Tasks
         self.maps_init = maps
         self.maps = dict(maps)
 
@@ -243,15 +225,16 @@ class ObsEnvironment(gym.Env):
         self.map_key = self.lst_keys[index]
         self.obstacle_map = self.maps[self.map_key]
 
+        assert 1 == 0, "second goal not deleted in update task"
         if self.unionTask:
-                if len(second_goal) != 0 :
-                    self.second_goal = State(second_goal[0], 
-                                    second_goal[1],
-                                    second_goal[2],
-                                    second_goal[3],
-                                    second_goal[4])
-                else:
-                    self.second_goal = None
+            if len(second_goal) != 0:
+                self.second_goal = State(second_goal[0], 
+                                         second_goal[1],
+                                         second_goal[2],
+                                         second_goal[3],
+                                         second_goal[4])
+            else:
+                self.second_goal = None
 
     def getBB(self, state, width=2.0, length=3.8, ego=True):
         x = state.x
@@ -278,41 +261,6 @@ class ObsEnvironment(gym.Env):
         
         return segments
 
-
-    def __sendBeam(self, state, angle, nearestObstacles=None, 
-                                with_angles=False, lst_indexes=[]):
-        if nearestObstacles is None:
-            nearestObstacles = list(self.obstacle_segments)
-            nearestObstacles.extend(self.dyn_obstacle_segments)
-        
-        angle = normalizeAngle(angle + state.theta)
-        new_x = state.x + self.MAX_DIST_LIDAR * cos(angle)
-        new_y = state.y + self.MAX_DIST_LIDAR * sin(angle)
-        p1 = Point(state.x, state.y)
-        q1 = Point(new_x, new_y)
-        min_dist = self.MAX_DIST_LIDAR
-        for i, obstacles in enumerate(nearestObstacles):
-            for obst_with_angles in obstacles:
-                if with_angles:
-                    angle1, angle2 = obst_with_angles[0]
-                    p2, q2 = obst_with_angles[1]
-                    if not angleIntersection(angle1, angle2, angle):
-                        continue
-                else:
-                    p2, q2 = obst_with_angles
-
-                if(doIntersect(p1, q1, p2, q2)):
-                    beam = Line(p1, q1)
-                    segment = Line(p2, q2)
-                    intersection = beam.isIntersect(segment)
-                    distance = math.hypot(p1.x - intersection.x, p1.y - intersection.y)
-                    min_dist = min(min_dist, distance)
-                    if (distance < self.vehicle.min_dist_to_check_collision):
-                        if i not in lst_indexes and i < len(self.obstacle_segments):
-                            lst_indexes.append(i)
-                    
-        return min_dist
-    
     def getRelevantSegments(self, state, with_angles=False):
         relevant_obstacles = []
         obstacles = list(self.obstacle_segments)
@@ -369,13 +317,14 @@ class ObsEnvironment(gym.Env):
         return delta
 
     def transformTask(self, from_state, goal_state, 
-                        obstacles, dynamic_obstacles=[]):
+                      obstacles, dynamic_obstacles=[]):
         
         if self.affine_transform:
             sx, sy, stheta, sv, sst = from_state
             gx, gy, gtheta, gv, gst = goal_state
             self.transform = Transformation()
-            start_transform, goal_transform = self.transform.rotate([sx, sy, stheta], [gx, gy, gtheta])
+            start_transform, goal_transform = self.transform.rotate(
+                                        [sx, sy, stheta], [gx, gy, gtheta])
             start_transform.append(sv)
             goal_transform.append(gv)
             start_transform.append(sst)
@@ -414,9 +363,11 @@ class ObsEnvironment(gym.Env):
             self.dynamic_obstacles = new_dyn_obstacles
 
         start = State(start_transform[0], start_transform[1], 
-            start_transform[2], start_transform[3], start_transform[4])
+                      start_transform[2], start_transform[3], 
+                      start_transform[4])
         goal = State(goal_transform[0], goal_transform[1], 
-            goal_transform[2], goal_transform[3], goal_transform[4])
+                     goal_transform[2], goal_transform[3], 
+                     goal_transform[4])
         
         return start, goal 
 
@@ -424,52 +375,58 @@ class ObsEnvironment(gym.Env):
         if (len(obstacles) > 0):
             train_tasks = generateTasks(obstacles)
             start, goal = train_tasks[0]
-        else:
-            start_x = 0
-            start_y = 0
-            goal_x = np.random.randint(self.min_dist, self.max_dist + 1)
-            goal_y = 0
-            start_theta = degToRad(np.random.randint(-self.alpha, self.alpha + 1))
-            goal_theta = degToRad(np.random.randint(-self.alpha, self.alpha + 1))
-            start_v = 0
-            goal_v = np.random.randint(self.min_vel, self.max_vel + 1)
-            start_steer = degToRad(np.random.randint(-self.max_steer, self.max_steer + 1))
-            goal_steer = 0
-            start = [start_x, start_y, start_theta, start_v, start_steer]
-            goal = [goal_x, goal_y, goal_theta, goal_v, goal_steer]
+
+            return (start, goal)
+
+        start_x = 0
+        start_y = 0
+        goal_x = np.random.randint(self.min_dist, self.max_dist + 1)
+        goal_y = 0
+        start_theta = degToRad(np.random.randint(-self.alpha, self.alpha + 1))
+        goal_theta = degToRad(np.random.randint(-self.alpha, self.alpha + 1))
+        start_v = 0
+        goal_v = np.random.randint(self.min_vel, self.max_vel + 1)
+        start_steer = degToRad(np.random.randint(-self.max_steer, self.max_steer + 1))
+        goal_steer = 0
+        start = [start_x, start_y, start_theta, start_v, start_steer]
+        goal = [goal_x, goal_y, goal_theta, goal_v, goal_steer]
         
         return (start, goal)
 
     def setTask(self, tasks, idx, obstacles, rrt):
-        if len(tasks) > 0:
-            i = np.random.randint(len(tasks)) if idx is None else idx
-            current_task = tuple(tasks[i])
-            if(len(current_task) == 2):
-                current, goal = current_task
-            else:
-                current, goal, dynamic_obstacles = current_task
-                if not rrt:
-                    #if (np.random.randint(3) > 0):
-                    if (np.random.randint(5) > 0):
-                        for dyn_obst in dynamic_obstacles:
-                            self.dynamic_obstacles.append(dyn_obst)
-                            self.dynamic_obstacles_v_s.append(0)
-                else:
+        if len(tasks) == 0:
+            current, goal = self.generateSimpleTask(obstacles)
+            self.current_state, self.goal = self.transformTask(current, goal, 
+                                                obstacles, self.dynamic_obstacles)
+            self.old_state = self.current_state
+
+            return
+
+        i = np.random.randint(len(tasks)) if idx is None else idx
+        current_task = tuple(tasks[i])
+        if(len(current_task) == 2):
+            current, goal = current_task
+        else:
+            current, goal, dynamic_obstacles = current_task
+            if not rrt:
+                if (np.random.randint(5) > 0):
                     for dyn_obst in dynamic_obstacles:
                         self.dynamic_obstacles.append(dyn_obst)
                         self.dynamic_obstacles_v_s.append(0)
-        else:
-            current, goal = self.generateSimpleTask(obstacles)
+            else:
+                for dyn_obst in dynamic_obstacles:
+                    self.dynamic_obstacles.append(dyn_obst)
+                    self.dynamic_obstacles_v_s.append(0)
 
-        self.current_state, self.goal = self.transformTask(current, goal, 
-                                            obstacles, self.dynamic_obstacles)
+        self.current_state, self.goal = self.transformTask(
+                            current, goal, obstacles, self.dynamic_obstacles)
         self.old_state = self.current_state
 
-    def reset(self, idx=None, fromTrain=True, val_key=None, rrt=False):
+    def reset(self, idx=None, val_key=None, rrt=False):
         self.maps = dict(self.maps_init)
         if not self.validate_env:
-            self.obst_random_actions = np.random.choice([True, 
-                                                False, False, False, False])
+            self.obst_random_actions = np.random.choice([
+                                        True, False, False, False, False])
         else:
             self.obst_random_actions = False
         self.stepCounter = 0
@@ -507,46 +464,19 @@ class ObsEnvironment(gym.Env):
                 elif val_key == "map6":
                     self.stop_dynamic_step = 200
 
-        #DEBUG
-        #print("DEBUG:", val_key, self.stop_dynamic_step)
-
-        if fromTrain:
-            index = np.random.randint(len(self.lst_keys))
-            self.map_key = self.lst_keys[index]
-            self.obstacle_map = self.maps[self.map_key]
-            tasks = self.trainTasks[self.map_key]
-            self.setTask(tasks, idx, self.obstacle_map, rrt)
-        else:
-            self.map_key = val_key
-            self.obstacle_map = self.maps[self.map_key]
-            tasks = self.valTasks[self.map_key]
-            self.setTask(tasks, idx, self.obstacle_map, rrt)
-
-        #DEBUG
-        #print("DEBUG dynamic:", self.dynamic_obstacles)
+        index = np.random.randint(len(self.lst_keys))
+        self.map_key = self.lst_keys[index]
+        self.obstacle_map = self.maps[self.map_key]
+        tasks = self.Tasks[self.map_key]
+        self.setTask(tasks, idx, self.obstacle_map, rrt)
 
         for obstacle in self.obstacle_map:
             obs = State(obstacle[0], obstacle[1], obstacle[2], 0, 0)
             width = obstacle[3]
             length = obstacle[4]
             self.obstacle_segments.append(self.getBB(obs, width=width, length=length, ego=False))
-        if self.unionTask:    
-            if self.union_without_forward_task:
-                self.first_goal_reached = True
-                assert isinstance(self.second_goal, State), \
-                    "second goal is not initilized"
-                self.goal = self.second_goal
-            else:
-                self.first_goal_reached = False
-        else:
-            self.first_goal_reached = True
-        if self.goal.theta != degToRad(90):
-            self.task = 1 #forward task
-        else:
-            self.task = -1 #backward task
 
         self.start_dist = self.__goalDist(self.current_state)
-
         self.last_images = []
         self.grid_static_obst = None
         self.grid_agent = None
@@ -762,37 +692,21 @@ class ObsEnvironment(gym.Env):
         start_time = time.time()
         temp_grid_obst = self.grid_static_obst + self.grid_dynamic_obst
         collision = temp_grid_obst[self.grid_agent == 1].sum() > 0
-        #DEBUG
-        #collision = temp_grid_obst[self.grid_agent == 1].sum() > 3
         collision = collision or (self.grid_agent.sum() == 0)
-        #collision = False
-        #if collision:
-        #    print("DEBUG COLLISION:", 
-        #        temp_grid_obst[self.grid_agent == 1].sum())
         end_time = time.time()
-
         self.collision_time += (end_time - start_time)
-        end_time = time.time()
+        
         distanceToGoal = self.__goalDist(new_state)
         info["EuclideanDistance"] = distanceToGoal
-        if self.unionTask and not self.first_goal_reached:
-            if self.soft_constraints:
-                goalReached = distanceToGoal < self.SOFT_EPS + self.dl_first_goal
-            elif self.medium_constraints:
-                goalReached = distanceToGoal < self.MEDIUM_EPS + self.dl_first_goal
-            elif self.hard_constraints:
-                goalReached = distanceToGoal < self.HARD_EPS + self.dl_first_goal\
-                    and abs(new_state.v - self.goal.v) <= self.SPEED_EPS
-        else:
-            if self.hard_constraints:
-                goalReached = distanceToGoal < self.HARD_EPS and abs(
-                    normalizeAngle(new_state.theta - self.goal.theta)) < self.ANGLE_EPS \
-                    and abs(new_state.v - self.goal.v) <= self.SPEED_EPS
-            elif self.medium_constraints:
-                goalReached = distanceToGoal < self.MEDIUM_EPS and abs(
-                    normalizeAngle(new_state.theta - self.goal.theta)) < self.ANGLE_EPS
-            elif self.soft_constraints:
-                goalReached = distanceToGoal < self.SOFT_EPS
+        if self.hard_constraints:
+            goalReached = distanceToGoal < self.HARD_EPS and abs(
+                normalizeAngle(new_state.theta - self.goal.theta)) < self.ANGLE_EPS \
+                and abs(new_state.v - self.goal.v) <= self.SPEED_EPS
+        elif self.medium_constraints:
+            goalReached = distanceToGoal < self.MEDIUM_EPS and abs(
+                normalizeAngle(new_state.theta - self.goal.theta)) < self.ANGLE_EPS
+        elif self.soft_constraints:
+            goalReached = distanceToGoal < self.SOFT_EPS
 
         if not self.validate_env:
             reward = self.__reward(self.old_state, new_state, 
@@ -805,31 +719,10 @@ class ObsEnvironment(gym.Env):
             self.old_state = self.current_state
         self.stepCounter += 1
         if goalReached or collision or (self.max_episode_steps == self.stepCounter):
-            if self.unionTask:
-                if goalReached:  
-                    if not self.first_goal_reached:
-                        self.first_goal_reached = True
-                        self.goal = self.second_goal
-                        self.start_dist = self.__goalDist(new_state)
-                        self.task = -1
-                        goalReached = False
-                        isDone = False
-                    else:
-                        isDone = True
-                        if collision:
-                            info["Collision"] = True
-                        elif goalReached:
-                            info["OK"] = True
-                        else:
-                            info["Max steps reached"] = True
-                else:
-                    isDone = True
-                    if collision:
-                        info["Collision"] = True
-                    else:
-                        info["Max episode reached"] = True
+            isDone = True
+            if goalReached:
+                info["OK"] = True
             else:
-                isDone = True
                 if collision:
                     info["Collision"] = True
                 else:

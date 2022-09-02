@@ -29,7 +29,7 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
     debug_dynamic = False
     debug_dataset = False
     debug_speed = False
-    debug_testdataset = True
+    debug_testdataset = False
     if use_wandb:
         wandb.init(project='validate_polamp', entity='grisha1')
     i = 0
@@ -63,7 +63,6 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
         episode_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
         true_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
         num_frames = 0
-
         last_render_start = time.time()
 
         def max_frames_reached(frames):
@@ -75,15 +74,15 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
         start_time = time.time()
         count_map = 0
         print("DEBUG val:")
-        print(env.valTasks.keys())
-        for val_key in env.valTasks:
+        print(env.Tasks.keys())
+        for val_key in env.Tasks:
             if debug_dataset or debug_testdataset:
                 total_tasks = 100
             if debug_speed:
-                val_key = np.random.choice(list(env.valTasks.keys()))
+                val_key = np.random.choice(list(env.Tasks.keys()))
             count_map += 1
-            eval_tasks = len(env.valTasks[val_key])
-            print("Num map:", count_map, "out of", len(env.valTasks), 
+            eval_tasks = len(env.Tasks[val_key])
+            print("Num map:", count_map, "out of", len(env.Tasks), 
                     "count task:", eval_tasks)
             if debug_testdataset:
                 if count_map < 1:
@@ -121,7 +120,7 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                         saved_last_image = False
                 print(f"##### Initializing id {id + 1} of {id_end} #####")
                 start_time = time.time()
-                obs = env.reset(idx=id, fromTrain=False, val_key=val_key)
+                obs = env.reset(idx=id, val_key=val_key)
 
                 rnn_states = torch.zeros([env.num_agents, get_hidden_size(cfg)], dtype=torch.float32, device=device)
                 episode_reward = np.zeros(env.num_agents)
