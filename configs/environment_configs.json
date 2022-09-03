@@ -32,7 +32,6 @@
     "use_acceleration_penalties" : 0,
     "use_velocity_goal_penalty" : 0,
     "use_different_acc_penalty": 0,
-    "union_without_forward_task": 1,
     "union": 1,
     "dynamic": 1,
     "static": 1,

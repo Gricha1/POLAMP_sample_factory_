@@ -105,7 +105,7 @@ def getCaseTasks(dyn_case, tasks_config, car_config, train=True):
                         f"incorrect static task, static is {static} " + \
                         f"but len static is {len(static_obsts)}"
                 
-                if not union:
+                if union:
                     forward_task = None
                 elif task_number % 2 == 0:
                     forward_task = False
