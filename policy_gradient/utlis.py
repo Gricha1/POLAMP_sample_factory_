@@ -1,10 +1,11 @@
+from turtle import forward
 import torch
 import json
 import os
 import numpy as np
 from EnvLib.utils import *
 
-def getTrainValidateTasks(train):
+def getTrainValidateTasks(tasks_config, car_config, train):
     """
     return:
         [task1, task2, task3, ...]
@@ -13,7 +14,10 @@ def getTrainValidateTasks(train):
     dynamic_cases = createDynamicCases() 
     tasks = [] 
     for dyn_case in dynamic_cases:
-        train_case_tasks = getCaseTasks(dyn_case, train=train)
+        train_case_tasks = getCaseTasks(dyn_case, 
+                                        tasks_config, 
+                                        car_config, 
+                                        train=train)
         tasks.extend(train_case_tasks)
 
     return tasks
@@ -52,7 +56,7 @@ def ChangeTaskFormat(generated_tasks):
         
     return maps, generated_tasks_map
 
-def getCaseTasks(dyn_case, train=True):
+def getCaseTasks(dyn_case, tasks_config, car_config, train=True):
     """
     return:
         [
@@ -66,8 +70,9 @@ def getCaseTasks(dyn_case, train=True):
         ]
     """
     case_tasks = []
-    static = True
-    dynamic = True
+    static = tasks_config['static']
+    dynamic = tasks_config['dynamic']
+    union = tasks_config['union']
     # static obsts params:
     if train:
         parking_heights = np.linspace(2.7 + 0.2, 2.7 + 5, 3)
@@ -83,9 +88,10 @@ def getCaseTasks(dyn_case, train=True):
     upper_boundary_width = 0.5 # any value
     upper_boundary_height = 17 
 
+    task_number = 1
     for parking_height in parking_heights:
         for parking_width in parking_widths:
-            for road_width in road_widths:
+            for road_width in road_widths:               
                 staticObstsInfo = {}
                 static_obsts = generateValetStaticObstsAndUpdateInfo(
                     parking_height, parking_width, bottom_left_boundary_height, 
@@ -98,20 +104,30 @@ def getCaseTasks(dyn_case, train=True):
                        (not static and len(static_obsts) == 0), \
                         f"incorrect static task, static is {static} " + \
                         f"but len static is {len(static_obsts)}"
-                #start, goal = getStartGoalAgentPose(
-                #        staticObstsInfo, config, temp_config
-                test_start_x = staticObstsInfo["bottom_left_boundary_center_x"]
-                test_start_y = staticObstsInfo["buttom_road_edge_y"] + 2
-                test_goal_x = test_start_x + 15
-                test_goal_y = test_start_y
-                start, goal = [test_start_x, test_start_y, 0, 0, 0], \
-                              [test_goal_x, test_goal_y, 0, 0, 0]
+                
+                if not union:
+                    forward_task = None
+                elif task_number % 2 == 0:
+                    forward_task = False
+                else:
+                    forward_task = True
+                start, goal = getStartGoalPose(staticObstsInfo, 
+                                               car_config, 
+                                               union,
+                                               forward_task)
+                #test_start_x = staticObstsInfo["bottom_left_boundary_center_x"]
+                #test_start_y = staticObstsInfo["buttom_road_edge_y"] + 2
+                #test_goal_x = test_start_x + 15
+                #test_goal_y = test_start_y
+                #start, goal = [test_start_x, test_start_y, 0, 0, 0], \
+                #              [test_goal_x, test_goal_y, 0, 0, 0]
                 agent_task = [start, goal]
                 assert len(start) == 5 and len(goal) == 5, \
                     f"start and goal len must be 5 but len start is: {len(start)} " + \
                     f"and len goal is: {len(goal)}"
                 dynamic_obsts = []
                 case_tasks.append((static_obsts, agent_task, dynamic_obsts))
+                task_number += 1
 
     return case_tasks
 
@@ -442,10 +458,7 @@ def generateDataSet(our_env_config, car_config):
 
     return dataSet, second_goal
 
-def getStartGoalAgentPose(staticObstsInfo, config, temp_config):
-    union = temp_config["union"]
-    if union:
-        forward_task = temp_config["forward_task"]
+def getStartGoalPose(staticObstsInfo, car_config, union, forward_task):
     parking_height = staticObstsInfo["parking_height"]
     parking_width = staticObstsInfo["parking_width"]
     road_width = staticObstsInfo["road_width"]
@@ -454,54 +467,213 @@ def getStartGoalAgentPose(staticObstsInfo, config, temp_config):
     bottom_left_boundary_center_y = staticObstsInfo["bottom_left_boundary_center_y"]
     bottom_left_boundary_height = staticObstsInfo["bottom_left_boundary_height"]
 
-    start_xs = np.linspace(bottom_left_boundary_center_x \
-                            - bottom_left_boundary_height \
-                            + config["length"] / 2 \
-                            - config["wheel_base"] / 2, 
-                            bottom_left_boundary_center_x \
-                            + bottom_left_boundary_height \
-                            - config["length"] / 2 \
-                            - config["wheel_base"] / 2 \
-                            + 2 * bottom_left_boundary_height + \
-                            parking_height,
-                            10)
-    start_ys = np.linspace(buttom_road_edge_y + config["width"] / 2 
-                            + 1.2,
-                            buttom_road_edge_y + road_width,
-                            buttom_road_edge_y + 2 * road_width \
-                            - config["width"] / 2 - 1.2,
-                            5
-                            )
-    # get range of values for goal_x and goal_y
-    safe_dx = 0.2 # d from left boundary to vahicle
-    safe_dy = 0.2 # d from bottom boundary to vahicle
-    acceptable_for_goal_dy = 0.7
-    if union:
+    assert (union and (forward_task is None)) or \
+            (not union and not (forward_task is None)), \
+            f"not correct task config: union is {union} " + \
+            f" but forward task is {forward_task}"
+
+    shift_for_start_dx = 0.7
+    shift_from_static_boundary = 1.2
+
+    if union and (forward_task is None):
+        start_xs = np.linspace(bottom_left_boundary_center_x \
+                                - bottom_left_boundary_height \
+                                + car_config["length"] / 2 \
+                                - car_config["wheel_base"] / 2, 
+                                bottom_left_boundary_center_x \
+                                + bottom_left_boundary_height \
+                                - car_config["length"] / 2 \
+                                - car_config["wheel_base"] / 2 \
+                                + 2 * bottom_left_boundary_height + \
+                                parking_height,
+                                10)
+        start_ys = np.linspace(buttom_road_edge_y + car_config["width"] / 2 
+                                + shift_from_static_boundary,
+                                buttom_road_edge_y + 2 * road_width \
+                                - car_config["width"] / 2 - shift_from_static_boundary,
+                                5
+                                )
+        start_thetas = np.linspace(-degToRad(20), degToRad(20), 10)
+
+    elif forward_task:
+        start_xs = np.linspace(bottom_left_boundary_center_x \
+                                - bottom_left_boundary_height \
+                                + car_config["length"] / 2 \
+                                - car_config["wheel_base"] / 2
+                                - shift_for_start_dx, 
+                                bottom_left_boundary_center_x \
+                                + bottom_left_boundary_height \
+                                - car_config["length"] / 2 \
+                                - car_config["wheel_base"] / 2
+                                + shift_for_start_dx,
+                                5)
+        start_ys = np.linspace(buttom_road_edge_y + car_config["width"] / 2 
+                                + 1.2,
+                                buttom_road_edge_y + 2 * road_width \
+                                - car_config["width"] / 2 - 1.2,
+                                5
+                                )
+        start_thetas = np.linspace(-degToRad(20), degToRad(20), 10)
+
+    else:
+        start_xs = np.linspace(bottom_left_boundary_center_x \
+                                + bottom_left_boundary_height \
+                                + parking_height \
+                                + car_config["length"] / 2 \
+                                - car_config["wheel_base"] / 2
+                                - shift_for_start_dx, 
+                                bottom_left_boundary_center_x \
+                                + bottom_left_boundary_height \
+                                + parking_height \
+                                + 2 * bottom_left_boundary_height \
+                                - car_config["length"] / 2 \
+                                - car_config["wheel_base"] / 2
+                                + shift_for_start_dx,
+                                10)
+        start_ys = np.linspace(buttom_road_edge_y + car_config["width"] / 2 
+                                + 1.2,
+                                buttom_road_edge_y + 2 * road_width \
+                                - car_config["width"] / 2 - 1.2,
+                                5
+                                )
+        start_thetas = np.linspace(-degToRad(20), degToRad(20), 10)
+
+    safe_dx = 0.4 # d from left boundary to vehicle (image observation resolution)
+    safe_dy = 0.4 # d from bottom boundary to vehicle (image observation resolution)
+    shift_goal_dx = 0.7
+    shift_goal_dy = 0.7
+    if union and (forward_task is None) or not (forward_task is None) and \
+        not forward_task:
         goal_xs = np.linspace(
             bottom_left_boundary_center_x \
-            + bottom_left_boundary_height + safe_dx + config["width"] / 2,
+            + bottom_left_boundary_height + safe_dx + car_config["width"] / 2,
             bottom_left_boundary_center_x \
             + bottom_left_boundary_height + parking_height - safe_dx \
-            - config["width"] / 2,
-            4
+            - car_config["width"] / 2,
+            5
         )
         goal_ys = np.linspace(
             bottom_left_boundary_center_y - parking_width / 2 + safe_dy \
-            + config["length"] / 2 - config["wheel_base"] / 2,
-            bottom_left_boundary_center_y + parking_width / 2 + safe_dy \
-            + acceptable_for_goal_dy,
+            + car_config["length"] / 2 - car_config["wheel_base"] / 2,
+            bottom_left_boundary_center_y + parking_width / 2 \
+            - car_config["length"] / 2 - car_config["wheel_base"] / 2 \
+            + shift_goal_dy,
             5
         )
+        goal_thetas = np.linspace(degToRad(85), degToRad(95), 5)
+
     elif forward_task:
-        pass
-    
+        goal_xs = np.linspace(bottom_left_boundary_center_x \
+                                + bottom_left_boundary_height \
+                                + parking_height \
+                                + car_config["length"] / 2 \
+                                - car_config["wheel_base"] / 2
+                                - shift_goal_dx, 
+                                bottom_left_boundary_center_x \
+                                + bottom_left_boundary_height \
+                                + parking_height \
+                                + 2 * bottom_left_boundary_height \
+                                - car_config["length"] / 2 \
+                                - car_config["wheel_base"] / 2
+                                + shift_goal_dx,
+                                10)
+        goal_ys = np.linspace(buttom_road_edge_y + car_config["width"] / 2 
+                                + 1.2,
+                                buttom_road_edge_y + 2 * road_width \
+                                - car_config["width"] / 2 - 1.2,
+                                5
+                                )
+        goal_thetas = np.linspace(-degToRad(20), degToRad(20), 10)
+
     start_x = np.random.choice(start_xs)
-    start_y = np.random.choice(start_ys)
-    start_theta = 0
+    start_y = np.random.choice(start_ys)    
     goal_x = np.random.choice(goal_xs)
     goal_y = np.random.choice(goal_ys)
-    goal_theta = degToRad(90)
+    start_theta = np.random.choice(start_thetas)
+    start_theta = np.random.choice(start_thetas)
+    goal_theta = np.random.choice(goal_thetas)
+
+    start_x, start_y, start_theta, goal_x, goal_y, goal_theta \
+                        = trySatisfyStartGoalConditions(start_x, start_y,
+                                                        start_theta,
+                                                        goal_x, goal_y,
+                                                        goal_theta,
+                                                        union,
+                                                        forward_task,
+                                                        staticObstsInfo,
+                                                        car_config)
+
     return [start_x, start_y, start_theta, 0., 0], [goal_x, goal_y, goal_theta, 0, 0]
+
+
+def trySatisfyStartGoalConditions(start_x, start_y,
+                                  start_theta,
+                                  goal_x, goal_y,
+                                  goal_theta,
+                                  union,
+                                  forward_task,
+                                  staticObstsInfo,
+                                  car_config):
+    parking_height = staticObstsInfo["parking_height"]
+    parking_width = staticObstsInfo["parking_width"]
+    road_width = staticObstsInfo["road_width"]
+    buttom_road_edge_y = staticObstsInfo["buttom_road_edge_y"]
+    bottom_left_boundary_center_x = staticObstsInfo["bottom_left_boundary_center_x"]
+    bottom_left_boundary_center_y = staticObstsInfo["bottom_left_boundary_center_y"]
+    bottom_left_boundary_height = staticObstsInfo["bottom_left_boundary_height"]
+    car_width = car_config['width']
+    shift_from_static_boundary_dy = 1.2
+    safe_dx = 0.4 + 0.1 # 0.1 constrain for angle
+
+    if not (forward_task is None) and forward_task:
+        assert start_x < goal_x, \
+            f"not correct start{start_x} and goal{goal_x} for task forward"
+        if goal_x - start_x < 10:
+            goal_x = start_x + 10
+        if abs(start_y - goal_y) > 3 and (goal_x - start_x) < 15:
+            start_x = start_x - 5
+            if np.random.random() > 0.5:
+                if start_y > goal_y:
+                    goal_y = start_y - 3
+                else:
+                    goal_y = start_y + 3
+            else:
+                if start_y > goal_y:
+                    start_y = goal_y + 3
+                else:
+                    start_y = goal_y - 3
+
+    if not (forward_task is None) or union:
+        if buttom_road_edge_y + 2 * road_width - start_y \
+                < 2 * shift_from_static_boundary_dy + car_width / 2 and \
+                start_theta > degToRad(5):
+            start_y -= shift_from_static_boundary_dy
+        if start_y  - buttom_road_edge_y \
+                < 2 * shift_from_static_boundary_dy + car_width / 2 and \
+                start_theta < -degToRad(5):
+            start_y += shift_from_static_boundary_dy
+
+    if not (forward_task is None) and forward_task:
+        if buttom_road_edge_y + 2 * road_width - goal_y \
+                < 2 * shift_from_static_boundary_dy + car_width / 2 and \
+                goal_theta > degToRad(5):
+            goal_y -= shift_from_static_boundary_dy
+        if goal_y  - buttom_road_edge_y \
+                < 2 * shift_from_static_boundary_dy + car_width / 2 and \
+                    goal_theta < -degToRad(5):
+            goal_y += shift_from_static_boundary_dy
+
+    if union or not (forward_task is None) and not forward_task:
+        if bottom_left_boundary_center_x + bottom_left_boundary_height \
+                + parking_height - car_width / 2 - goal_x \
+                <= safe_dx and goal_theta <= degToRad(88):
+            goal_theta = degToRad(90)
+        if goal_x - bottom_left_boundary_center_x \
+                - bottom_left_boundary_height - car_width / 2 \
+                <= safe_dx and goal_theta >= degToRad(92):
+            goal_theta = degToRad(90)
+            
+    return start_x, start_y, start_theta, goal_x, goal_y, goal_theta
 
 def getDynamicObsts(start_x, start_y, goal_x, goal_y):
     theta_angle = 0

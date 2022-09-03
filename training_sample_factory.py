@@ -91,7 +91,11 @@ def make_custom_env_func(full_env_name, cfg=None, env_config=None):
         dataSet, second_goal = generateTestDataSet(our_env_config, car_config)
     #else:
     #    dataSet, second_goal = generateDataSet(our_env_config, car_config)
-    generated_tasks = getTrainValidateTasks(train=True)
+    tasks_config = {}
+    tasks_config["union"] = our_env_config["union"]
+    tasks_config["static"] = our_env_config["static"]
+    tasks_config["dynamic"] = our_env_config["dynamic"]
+    generated_tasks = getTrainValidateTasks(tasks_config, car_config, train=True)
 
     maps, generated_tasks = ChangeTaskFormat(generated_tasks)
 
@@ -109,7 +113,7 @@ def make_custom_env_func(full_env_name, cfg=None, env_config=None):
     else:
         environment_config = {
             'car_config': car_config,
-            'Tasks': trainTask,
+            'Tasks': generated_tasks,
             'maps': maps,
             'our_env_config' : our_env_config,
             'reward_config' : reward_config,

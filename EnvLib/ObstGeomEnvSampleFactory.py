@@ -775,12 +775,8 @@ class ObsEnvironment(gym.Env):
         for dyn_obst in self.dynamic_obstacles:
             width = self.vehicle.width / 2 + 0.3
             length = self.vehicle.length / 2 + 0.1
-            #width = self.vehicle.width / 2
-            #length = self.vehicle.length / 2
             center_dyn_obst = self.vehicle.shift_state(dyn_obst)
             agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
-            #agentBB = self.getBB(center_dyn_obst)
-
             self.drawObstacles(agentBB)
             plt.arrow(dyn_obst.x, dyn_obst.y, 2 * math.cos(dyn_obst.theta), 2 * math.sin(dyn_obst.theta), head_width=0.5, color='magenta')
         
@@ -793,7 +789,6 @@ class ObsEnvironment(gym.Env):
 
         center_goal_state = self.vehicle.shift_state(self.goal)
         agentBB = self.getBB(center_goal_state)
-        #self.drawObstacles(agentBB, color="-cyan")
         self.drawObstacles(agentBB, color="cyan")
 
         vehicle_heading = Vec2d(cos(center_state.theta),
@@ -830,7 +825,12 @@ class ObsEnvironment(gym.Env):
         else:
             reeshep_dist = 0
         
-        ax.set_title(f'$step = {step_count:.0f}, ds = {ds:.1f}, gear = {self.vehicle.gear}, steer={delta:.0f}$ \n $\\theta = {theta:.0f}^\\circ, a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, r={reward:.0f}, RS_d={reeshep_dist:.1f}$')
+        ax.set_title(f'$step = {step_count:.0f}, ' \
+                     + f'ds = {ds:.1f}, dx = {dx:.1f}, dy = {dy:.1f}, ' \
+                     + f'gear = {self.vehicle.gear}, ' \
+                     + f'steer={delta:.0f}$ \n $\\theta = {theta:.0f}^\\circ, ' \
+                     + f'a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, ' \
+                     + f'r={reward:.0f}, RS_d={reeshep_dist:.1f}$')
         
         if save_image:
             fig.canvas.draw()
