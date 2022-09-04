@@ -11,10 +11,13 @@ def getTrainValidateTasks(tasks_config, car_config, train):
         [task1, task2, task3, ...]
         where task1 = ([stat_obst_1, ...], [start, goal], [dyn_obst_1, ...])
     """
-    dynamic_cases = createDynamicCases() 
     tasks = [] 
-    for dyn_case in dynamic_cases:
-        train_case_tasks = getCaseTasks(dyn_case, 
+    for case_num in range(1, 10):
+        #test
+        if case_num != 8:
+            continue
+
+        train_case_tasks = getCaseTasks(case_num,
                                         tasks_config, 
                                         car_config, 
                                         train=train)
@@ -56,7 +59,7 @@ def ChangeTaskFormat(generated_tasks):
         
     return maps, generated_tasks_map
 
-def getCaseTasks(dyn_case, tasks_config, car_config, train=True):
+def getCaseTasks(case_num, tasks_config, car_config, train=True):
     """
     return:
         [
@@ -93,7 +96,7 @@ def getCaseTasks(dyn_case, tasks_config, car_config, train=True):
         for parking_width in parking_widths:
             for road_width in road_widths:               
                 staticObstsInfo = {}
-                static_obsts = generateValetStaticObstsAndUpdateInfo(
+                static_obsts = getValetStaticObstsAndUpdateInfo(
                     parking_height, parking_width, bottom_left_boundary_height, 
                     upper_boundary_width, upper_boundary_height,
                     bottom_left_boundary_center_x, bottom_left_boundary_center_y, 
@@ -111,25 +114,222 @@ def getCaseTasks(dyn_case, tasks_config, car_config, train=True):
                     forward_task = False
                 else:
                     forward_task = True
-                start, goal = getStartGoalPose(staticObstsInfo, 
-                                               car_config, 
-                                               union,
-                                               forward_task)
-                #test_start_x = staticObstsInfo["bottom_left_boundary_center_x"]
-                #test_start_y = staticObstsInfo["buttom_road_edge_y"] + 2
-                #test_goal_x = test_start_x + 15
-                #test_goal_y = test_start_y
-                #start, goal = [test_start_x, test_start_y, 0, 0, 0], \
-                #              [test_goal_x, test_goal_y, 0, 0, 0]
+                start, goal = getValetStartGoalPose(staticObstsInfo, 
+                                                    car_config, 
+                                                    union,
+                                                    forward_task)
                 agent_task = [start, goal]
                 assert len(start) == 5 and len(goal) == 5, \
                     f"start and goal len must be 5 but len start is: {len(start)} " + \
                     f"and len goal is: {len(goal)}"
-                dynamic_obsts = []
+
+                dynamic_obsts = getCaseValetDynamicObst(staticObstsInfo, 
+                                                         car_config, 
+                                                         case_num)
+
+                assert len(dynamic_obsts) == 1 or len(dynamic_obsts) == 0,\
+                    "incorrent count of dynamics in env, should be <= 1 " \
+                    + f"but {len(dynamic_obsts)} given"
+                static_obsts, agent_task, dynamic_obsts = trySatisfyCollisionConditions(
+                                                                    staticObstsInfo,
+                                                                    static_obsts, 
+                                                                    agent_task, 
+                                                                    dynamic_obsts
+                                                                    )
                 case_tasks.append((static_obsts, agent_task, dynamic_obsts))
                 task_number += 1
 
     return case_tasks
+
+def trySatisfyCollisionConditions(staticObstsInfo,
+                                  static_obsts, 
+                                  agent_task, 
+                                  dynamic_obsts):
+    if len(dynamic_obsts) == 0:
+        return static_obsts, agent_task, dynamic_obsts
+
+    agent_x, agent_y, agent_theta, agent_v, agent_steer = agent_task[0]
+    goal_x, goal_y, goal_theta, goal_v, goal_steer = agent_task[1]
+    dyn_x, dyn_y, dyn_theta, dyn_v, dyn_steer = dynamic_obsts[0]
+
+    agent = [agent_x, agent_y, agent_theta, agent_v, agent_steer]
+    goal = [goal_x, goal_y, goal_theta, goal_v, goal_steer]
+    agent_task = [agent, goal]
+    dynamic_obsts = [[dyn_x, dyn_y, dyn_theta, dyn_v, dyn_steer]]
+
+    return static_obsts, agent_task, dynamic_obsts
+
+def getCaseValetDynamicObst(staticObstsInfo, car_config, case_num):
+    parking_height = staticObstsInfo["parking_height"]
+    parking_width = staticObstsInfo["parking_width"]
+    road_width = staticObstsInfo["road_width"]
+    buttom_road_edge_y = staticObstsInfo["buttom_road_edge_y"]
+    bottom_left_boundary_center_x = staticObstsInfo["bottom_left_boundary_center_x"]
+    bottom_left_boundary_center_y = staticObstsInfo["bottom_left_boundary_center_y"]
+    bottom_left_boundary_height = staticObstsInfo["bottom_left_boundary_height"]
+    bottom_left_boundary_width = staticObstsInfo["bottom_left_boundary_width"]
+    bottom_right_boundary_height = staticObstsInfo["bottom_right_boundary_height"]
+    upper_boundary_width = staticObstsInfo["upper_boundary_width"]
+    wheel_base = car_config['wheel_base']
+    car_width = car_config["width"]
+    shift_for_dynamic_dx = 0.7 # for learning purpose 
+    shift_for_dynamic_dy = 0.7 # for learning purpose 
+    shift_from_static_boundary = 1.2
+
+    if case_num == 1:
+        dynamics = []
+    elif case_num == 2:
+        dynamics = []
+    elif case_num == 3:
+        dynamics = []
+    elif case_num == 4:
+        dynamics = []
+    elif case_num == 5:
+        x_min = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height / 2 \
+                + wheel_base / 2 - shift_for_dynamic_dx 
+        x_max = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height \
+                + 2 * bottom_left_boundary_height \
+                + wheel_base / 2 + shift_for_dynamic_dx 
+        y_min = buttom_road_edge_y + road_width + shift_for_dynamic_dy
+        y_max = buttom_road_edge_y + 2 * road_width \
+                - car_width / 2 + shift_from_static_boundary
+        theta_min = degToRad(178)
+        theta_max = degToRad(182)
+        v_min = 0.2
+        v_max = 0.7
+        steer_min = 0
+        steer_max = 0
+
+    elif case_num == 6:
+        x_min = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height / 2 \
+                + wheel_base / 2 - shift_for_dynamic_dx 
+        x_max = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height \
+                + 2 * bottom_left_boundary_height \
+                + wheel_base / 2 + shift_for_dynamic_dx 
+        y_min = buttom_road_edge_y + car_width / 2 \
+                + shift_from_static_boundary - shift_for_dynamic_dy
+        y_max = buttom_road_edge_y + road_width
+        theta_min = degToRad(178)
+        theta_max = degToRad(182)
+        v_min = 0.2
+        v_max = 0.7
+        steer_min = 0
+        steer_max = 0
+
+    elif case_num == 7:
+        pass
+    elif case_num == 8:
+        from_bottom_parking_place = np.random.choice([True, False])
+        x_min = bottom_left_boundary_center_x - shift_for_dynamic_dx
+        x_max = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height \
+                + bottom_right_boundary_height + shift_for_dynamic_dx
+        if from_bottom_parking_place:
+            y_min = bottom_left_boundary_center_y - bottom_left_boundary_width \
+                    - shift_for_dynamic_dx
+            y_max = buttom_road_edge_y + road_width - shift_for_dynamic_dx
+            theta_min = degToRad(90 - 40)
+            theta_max = degToRad(90 + 40)
+        else:
+            y_min = buttom_road_edge_y + road_width \
+                    + shift_for_dynamic_dx
+            y_max = buttom_road_edge_y + 2 * road_width \
+                + 2 * upper_boundary_width \
+                + shift_for_dynamic_dx
+            theta_min = degToRad(270 - 40)
+            theta_max = degToRad(270 + 40)
+        v_min = 0.2
+        v_max = 0.7
+        steer_min = 0
+        steer_max = 0
+
+    elif case_num == 9:
+        from_bottom_parking_place = np.random.choice([True, False])
+        x_min = bottom_left_boundary_center_x \
+                - bottom_left_boundary_height - shift_for_dynamic_dx
+        x_max = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height \
+                + 2 * bottom_left_boundary_height + shift_for_dynamic_dx
+        if from_bottom_parking_place:
+            y_min = bottom_left_boundary_center_y - bottom_left_boundary_width \
+                    - shift_for_dynamic_dx
+            y_max = buttom_road_edge_y + road_width - shift_for_dynamic_dx
+            theta_min = degToRad(88)
+            theta_max = degToRad(92)
+        else:
+            y_min = buttom_road_edge_y + road_width \
+                    + shift_for_dynamic_dx
+            y_max = buttom_road_edge_y + 2 * road_width \
+                + 2 * upper_boundary_width \
+                + shift_for_dynamic_dx
+            theta_min = degToRad(268)
+            theta_max = degToRad(272)
+        v_min = 0.2
+        v_max = 0.7
+        steer_min = 0
+        steer_max = 0
+
+    dynamic = generateCar(x_min, x_max, 
+                             y_min, y_max,
+                             theta_min, theta_max, 
+                             v_min, v_max,
+                             steer_min, steer_max)
+    if len(dynamic) == 0:
+        return []
+
+    dynamic = trySatisfyDynamicConditions(staticObstsInfo,
+                                           car_config,
+                                           dynamic)
+
+    return [dynamic]
+
+def trySatisfyDynamicConditions(staticObstsInfo, car_config, dynamic):
+    road_width = staticObstsInfo["road_width"]
+    buttom_road_edge_y = staticObstsInfo["buttom_road_edge_y"]
+    wheel_base = car_config['wheel_base']
+    car_width = car_config["width"]
+    shift_from_static_boundary = 1.2
+
+    x, y, theta, v, steer = dynamic
+    if buttom_road_edge_y <= y and \
+       y <= buttom_road_edge_y + 2 * road_width and \
+       road_width <= 4:
+            if degToRad(178) <= theta and theta <= degToRad(182):
+                theta = degToRad(180)
+            elif degToRad(-2) <= theta and theta <= degToRad(2):
+                theta = 0
+            if y <= buttom_road_edge_y + road_width:
+                y = buttom_road_edge_y + car_width / 2 \
+                    + shift_from_static_boundary
+            else:
+                y = buttom_road_edge_y + 2 * road_width \
+                    - car_width / 2 - shift_from_static_boundary
+        
+    return [x, y, theta, v, steer]
+
+
+def generateCar(x_min, x_max, 
+                y_min, y_max,
+                theta_min, theta_max, 
+                v_min, v_max,
+                steer_min, steer_max):
+    x_s = np.linspace(x_min, x_max, 10)
+    y_s = np.linspace(y_min, y_max, 10)
+    theta_s = np.linspace(theta_min, theta_max, 5)
+    v_s = np.linspace(v_min, v_max, 5)
+    steer_s = np.linspace(steer_min, steer_max, 5)
+    
+    x = np.random.choice(x_s)
+    y = np.random.choice(y_s)
+    theta = np.random.choice(theta_s)
+    v = np.random.choice(v_s)
+    steer = np.random.choice(steer_s)
+    
+    return [x, y, theta, v, steer]
 
 def isAppropiateTask():
     pass
@@ -137,7 +337,8 @@ def isAppropiateTask():
 def changeToApprotiateTask():
     pass
 
-def generateValetStaticObstsAndUpdateInfo(parking_height, parking_width, 
+def getValetStaticObstsAndUpdateInfo(
+        parking_height, parking_width, 
         bottom_left_boundary_height, upper_boundary_width, upper_boundary_height,
         bottom_left_boundary_center_x, bottom_left_boundary_center_y, road_width_,
         staticObstsInfo):
@@ -183,6 +384,9 @@ def generateValetStaticObstsAndUpdateInfo(parking_height, parking_width,
     staticObstsInfo["bottom_left_boundary_center_x"] = bottom_left_boundary_center_x
     staticObstsInfo["bottom_left_boundary_center_y"] = bottom_left_boundary_center_y
     staticObstsInfo["bottom_left_boundary_height"] = bottom_left_boundary_height
+    staticObstsInfo["bottom_left_boundary_width"] = bottom_left_boundary_width
+    staticObstsInfo["upper_boundary_width"] = upper_boundary_width
+    staticObstsInfo["bottom_right_boundary_height"] = bottom_right_boundary_height
 
     left_bottom = [
                     bottom_left_boundary_center_x, 
@@ -205,12 +409,7 @@ def generateValetStaticObstsAndUpdateInfo(parking_height, parking_width,
 
     return [left_bottom, down_bottom, right_bottom, top]
 
-def generateTestDataSet(our_env_config, car_config):
-    dataSet = {}
-    maps = {} 
-    trainTask = {}
-    valTasks = {}
-    #boundaries
+def getTestTasks(car_config):
     parking_height = 2.7
     parking_width = 4.5
     bottom_left_boundary_width = parking_width / 2
@@ -247,9 +446,6 @@ def generateTestDataSet(our_env_config, car_config):
     # parameters variation:
     bottom_left_right_dx = np.linspace(-1, -0.2, 3)
     road_width = np.linspace(3, 6, 3)
-
-    #bottom_left_right_dx_ = -0.2
-    #road_width_ = 3
     bottom_left_right_dx_ = -1.5
     road_width_ = 5
     
@@ -282,103 +478,106 @@ def generateTestDataSet(our_env_config, car_config):
     dyn_obst_1 = [forward_start_x_ + 28, 
                   bottom_road_edge_y + road_width_ + 0.5 * road_width_, 
                   degToRad(180), 0.5, 0]
-    task_1 = [(
-                start_pose_1,
-                second_goal,
+    task_1 = (
+                map_,
+                [start_pose_1,
+                second_goal],
                 [dyn_obst_1]
-             )]
+             )
              
     start_pose_2 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
     dyn_obst_2 = [forward_start_x_ + 28, 
                   bottom_road_edge_y + 0.5 * road_width_, 
                   degToRad(180), 0.5, 0]
-    task_2 = [(
-                start_pose_2,
-                second_goal,
+    task_2 = (
+                map_,
+                [start_pose_2,
+                second_goal],
                 [dyn_obst_2]
-             )]
+             )
 
     start_pose_3 = [forward_start_x_, start_y_on_center, 0, 0, 0]
     dyn_obst_3 = [forward_start_x_ + 28, 
                   bottom_road_edge_y + road_width_ + 0.5 * road_width_, 
                   degToRad(180), 0.5, 0]
-    task_3 = [(
-                start_pose_3,
-                second_goal,
+    task_3 = (
+                map_,
+                [start_pose_3,
+                second_goal],
                 [dyn_obst_3]
-             )]
+             )
 
     start_pose_4 = [forward_start_x_, start_y_on_center, 0, 0, 0]
     dyn_obst_4 = [forward_start_x_ + 28, 
                   bottom_road_edge_y + 0.5 * road_width_, 
                   degToRad(180), 0.5, 0]
-    task_4 = [(
-                start_pose_4,
-                second_goal,
+    task_4 = (
+                map_,
+                [start_pose_4,
+                second_goal],
                 [dyn_obst_4]
-             )]
+             )
         
     start_pose_5 = [forward_start_x_, start_y_on_center, 0, 0, 0]
     dyn_obst_5 = [forward_start_x_ + 20, 
                   bottom_road_edge_y + 0.5 * road_width_, 
                   degToRad(180), 0.5, 0]
-    task_5 = [(
-                start_pose_5,
-                second_goal,
+    task_5 = (
+                map_,
+                [start_pose_5,
+                second_goal],
                 [dyn_obst_5]
-             )]
+             )
 
     start_pose_6 = [forward_start_x_, start_y_on_center, 0, 0, 0]
     dyn_obst_6 = [forward_start_x_ + 20, 
                   bottom_road_edge_y + road_width_ + 0.5 * road_width_, 
                   degToRad(180), 0.5, 0]
-    task_6 = [(
-                start_pose_6,
-                second_goal,
+    task_6 = (
+                map_,
+                [start_pose_6,
+                second_goal],
                 [dyn_obst_6]
-             )]
+             )
 
     start_pose_7 = [forward_start_x_, start_y_on_center, 0, 0, 0]
     dyn_obst_7 = [forward_start_x_ - 7, 
                   start_y_on_center, 
                   0, 0.5, 0]
-    task_7 = [(
-                start_pose_7,
-                second_goal,
+    task_7 = (
+                map_,
+                [start_pose_7,
+                second_goal],
                 [dyn_obst_7]
-             )]
+             )
 
     start_pose_8 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
     dyn_obst_8 = [second_goal[0] + 5, 
                   second_goal[1], 
                   degToRad(130), 0.35, 0]
-    task_8 = [(
-                start_pose_8,
-                second_goal,
+    task_8 = (
+                map_,
+                [start_pose_8,
+                second_goal],
                 [dyn_obst_8]
-             )]
+             )
 
     start_pose_9 = [forward_start_x_, start_y_on_bottom_lane, 0, 0, 0]
     dyn_obst_9 = [second_goal[0] - 3.2, 
                   second_goal[1], 
                   degToRad(90), 0.3, 0]
-    task_9 = [(
-                start_pose_9,
-                second_goal,
+    task_9 = (
+                map_,
+                [start_pose_9,
+                second_goal],
                 [dyn_obst_9]
-             )]
+             )
 
 
     tasks = [task_1, task_2, task_3, task_4, 
              task_5, task_6, task_7, task_8, task_9]
-    for index, task_ in enumerate(tasks):
-        maps["map" + str(index)] = map_
-        trainTask["map" + str(index)] = task_
-        valTasks["map" + str(index)] = task_
 
-    dataSet["empty"] = (maps, trainTask, valTasks)
-
-    return dataSet, second_goal
+    return tasks
 
 def generateDataSet(our_env_config, car_config):
     dataSet = {}
@@ -414,7 +613,7 @@ def generateDataSet(our_env_config, car_config):
         for parking_width in parking_widths:
             for road_width in road_widths:
                 if our_env_config['static']:
-                    maps["map" + str(index)] = generateValetStaticObstsAndUpdateInfo(
+                    maps["map" + str(index)] = getValetStaticObstsAndUpdateInfo(
                         parking_height, parking_width, bottom_left_boundary_height, 
                         upper_boundary_width, upper_boundary_height,
                         bottom_left_boundary_center_x, bottom_left_boundary_center_y, 
@@ -458,7 +657,7 @@ def generateDataSet(our_env_config, car_config):
 
     return dataSet, second_goal
 
-def getStartGoalPose(staticObstsInfo, car_config, union, forward_task):
+def getValetStartGoalPose(staticObstsInfo, car_config, union, forward_task):
     parking_height = staticObstsInfo["parking_height"]
     parking_width = staticObstsInfo["parking_width"]
     road_width = staticObstsInfo["road_width"]
@@ -585,11 +784,15 @@ def getStartGoalPose(staticObstsInfo, car_config, union, forward_task):
                                 )
         goal_thetas = np.linspace(-degToRad(20), degToRad(20), 10)
 
+    #start_x, start_y, start_theta, start_v, start_steer = generateCar(start_xs[0], 
+    #                                                                  start_xs[1],
+    #                                                                  start_thetas[0],
+    #                                                                  start_thetas[1],
+    #                                                                  )
     start_x = np.random.choice(start_xs)
     start_y = np.random.choice(start_ys)    
     goal_x = np.random.choice(goal_xs)
     goal_y = np.random.choice(goal_ys)
-    start_theta = np.random.choice(start_thetas)
     start_theta = np.random.choice(start_thetas)
     goal_theta = np.random.choice(goal_thetas)
 

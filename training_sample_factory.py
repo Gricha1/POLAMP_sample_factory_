@@ -24,7 +24,7 @@ from sample_factory.envs.env_registry import global_env_registry
 from sample_factory.run_algorithm import run_algorithm
 
 from policy_gradient.utlis import generateDataSet
-from policy_gradient.utlis import generateTestDataSet
+from policy_gradient.utlis import getTestTasks
 from EnvLib.ObstGeomEnvSampleFactory import *
 from utils_SF.residual_net import ResnetEncoder
 
@@ -88,18 +88,14 @@ def custom_parse_args(argv=None, evaluation=False):
 
 def make_custom_env_func(full_env_name, cfg=None, env_config=None):
     if our_env_config["validate_env"] and our_env_config["validateTestDataset"]:
-        dataSet, second_goal = generateTestDataSet(our_env_config, car_config)
-    #else:
-    #    dataSet, second_goal = generateDataSet(our_env_config, car_config)
-    tasks_config = {}
-    tasks_config["union"] = our_env_config["union"]
-    tasks_config["static"] = our_env_config["static"]
-    tasks_config["dynamic"] = our_env_config["dynamic"]
-    generated_tasks = getTrainValidateTasks(tasks_config, car_config, train=True)
-
+        generated_tasks = getTestTasks(car_config)
+    else:
+        tasks_config = {}
+        tasks_config["union"] = our_env_config["union"]
+        tasks_config["static"] = our_env_config["static"]
+        tasks_config["dynamic"] = our_env_config["dynamic"]
+        generated_tasks = getTrainValidateTasks(tasks_config, car_config, train=True)
     maps, generated_tasks = ChangeTaskFormat(generated_tasks)
-
-    #maps, trainTask, valTasks = dataSet["empty"]
   
     if our_env_config["union"]:
         environment_config = {
