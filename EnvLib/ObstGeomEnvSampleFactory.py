@@ -1,3 +1,4 @@
+from tkinter import E
 import gym
 import matplotlib.pyplot as plt
 from planning.generateMap import generateTasks
@@ -15,19 +16,35 @@ from planning.reedShepp import *
 from policy_gradient.utlis import *
 
 class State:
-    def __init__(self, x, y, theta, v, steer):
+    def __init__(self, x, y, theta, v, steer, 
+                 v_s=0, w=0, gear=None, last_a=0, last_Eps=0,
+                 centred_x=0, centred_y=0, width=0, length=0, wheel_base=None):
         self.x = x
         self.y = y
         self.theta = theta
         self.v = v
         self.steer = steer
-        self.width = 0
-        self.length = 0
+        self.v_s = v_s
+        self.w = w
+        self.gear = gear
+        self.last_a = last_a
+        self.last_Eps = last_Eps
+        self.centred_x = centred_x
+        self.centred_y = centred_y
+        self.width = width
+        self.length = length
+        self.wheel_base = wheel_base
 
-class VehicleConfig:
-    def __init__(self, car_config):
-        self.length = car_config["length"]
-        self.width = car_config["width"]
+class Vehicle:
+    def __init__(self, car_config, ego_car):
+        self.ego_car = ego_car
+        if ego_car:
+            self.length = car_config["length"]
+            self.width = car_config["width"]
+        else:
+            safe_buffer = 0.6
+            self.length = car_config["length"] + safe_buffer
+            self.width = car_config["width"] + safe_buffer
         self.wheel_base = car_config["wheel_base"]
         self.safe_eps = car_config["safe_eps"]
         self.max_steer = degToRad(car_config["max_steer"])
@@ -38,78 +55,115 @@ class VehicleConfig:
         self.max_ang_acc = car_config["max_ang_acc"]
         self.delta_t = car_config["delta_t"]
         self.use_clip = car_config["use_clip"]
-        self.jerk = car_config["jerk"]
-        if self.jerk != 0:
-            self.is_jerk = True
+        if "movement_function" not in car_config:
+            self.movement_function = None
         else:
-            self.is_jerk = False
-        self.rear_to_center = (self.length - self.wheel_base) / 2.
-        self.min_dist_to_check_collision = math.hypot(self.wheel_base / 2 \
-                + self.length / 2., self.width / 2.)
-        self.car_radius = math.hypot(self.length / 2., self.width / 2.)
+            self.movement_function = car_config["movement_function"]
         
-    def dynamic(self, state, action):
-        a = action[0]
-        Eps = action[1]
+    def reset(self, state):
+        self.last_a = 0
+        self.last_Eps = 0
+        self.shifted_x = state.x
+        self.shifted_y = state.y
+        self.theta = state.theta
+        self.v = state.v
+        self.steer = state.steer
+        self.v_s = 0
+        self.w = 0
+        self.gear = None
+
+    def step(self, action=None):
         dt = self.delta_t
-  
-        if self.use_clip:
-            a = np.clip(a, -self.max_acc, self.max_acc)
-            Eps = np.clip(Eps, -self.max_ang_acc, self.max_ang_acc)
-        self.a = a
-        self.Eps = Eps
-        
+        x = self.shifted_x
+        y = self.shifted_y
+        theta = self.theta
+        v = self.v
+        steer = self.steer
+        v_s = self.v_s
+        gear = self.gear
+
+        if not self.ego_car:
+            a = 0
+            Eps = 0
+        else:
+            assert not(action is None), \
+                "action cant be None for ego_car in step function"
+            a = action[0]
+            Eps = action[1]
+            if self.use_clip:
+                a = np.clip(a, -self.max_acc, self.max_acc)
+                Eps = np.clip(Eps, -self.max_ang_acc, self.max_ang_acc)
+
         dV = a * dt
-        V = state.v + dV
-        overSpeeding = V > self.max_vel or V < self.min_vel
-        V = np.clip(V, self.min_vel, self.max_vel)
+        new_v = v + dV
+        overSpeeding = new_v > self.max_vel or new_v < self.min_vel
+        new_v = np.clip(new_v, self.min_vel, self.max_vel)
 
         dv_s = Eps * dt
-        self.v_s = self.v_s + dv_s
-        self.v_s = np.clip(self.v_s, -self.max_ang_vel, self.max_ang_vel)
-        dsteer = self.v_s * dt
-        steer = normalizeAngle(state.steer + dsteer)
-        overSteering = abs(steer) > self.max_steer
-        steer = np.clip(steer, -self.max_steer, self.max_steer)
+        new_v_s = v_s + dv_s
+        new_v_s = np.clip(new_v_s, -self.max_ang_vel, self.max_ang_vel)
+        dsteer = new_v_s * dt
+        new_steer = steer + dsteer
+        new_steer = normalizeAngle(new_steer)
+        overSteering = abs(new_steer) > self.max_steer
+        new_steer = np.clip(new_steer, -self.max_steer, self.max_steer)
 
-        w = (V * np.tan(steer) / self.wheel_base)
-        self.w = w
+        w = (new_v * np.tan(steer) / self.wheel_base)
         dtheta = w * dt
-        theta = normalizeAngle(state.theta + dtheta)
+        new_theta = theta + dtheta
+        new_theta = normalizeAngle(new_theta)
 
-        dx = V * np.cos(theta) * dt
-        dy = V * np.sin(theta) * dt
-        x = state.x + dx
-        y = state.y + dy
+        dx = new_v * np.cos(theta) * dt
+        dy = new_v * np.sin(theta) * dt
+        new_x = x + dx
+        new_y = y + dy
 
-        new_state = State(x, y, theta, V, steer)
-
-        self.prev_gear = self.gear
-        if self.gear is None:
-            if V > 0:
-                self.gear = True
-            elif V < 0:
-                self.gear = False
+        new_gear = gear
+        if gear is None:
+            if new_v > 0:
+                new_gear = True
+            elif new_v < 0:
+                new_gear = False
         else:
-            if self.gear:
-                if V < 0:
-                    self.gear = False
+            if gear:
+                if new_v < 0:
+                    new_gear = False
             else:
-                if V > 0:
-                    self.gear = True
+                if new_v > 0:
+                    new_gear = True
 
-            
+        self.last_a = a
+        self.last_Eps = Eps
+        self.prev_gear = gear
+        self.shifted_x = new_x
+        self.shifted_y = new_y
+        self.theta = new_theta
+        self.v = new_v
+        self.steer = new_steer
+        self.v_s = v_s
+        self.w = w
+        self.gear = new_gear
+        new_state = State(new_x, new_y, new_theta, new_v, steer)
+
         return new_state, overSpeeding, overSteering
     
-    
-    def shift_state(self, state, toCenter=False):
-        l = self.length / 2
-        shift = l - self.rear_to_center
-        shift = -shift if toCenter else shift
-        new_state = State(state.x + shift * cos(state.theta), 
-                state.y + shift * sin(state.theta), state.theta, state.v, state.steer)
-        return new_state
+    def getCurrentState(self):
+        centred_x, centred_y = self.getCentredCoordinates()
 
+        return State(self.shifted_x, self.shifted_y, 
+                     self.theta, self.v, self.steer,
+                     self.v_s, self.w, self.gear,
+                     self.last_a, self.last_Eps,
+                     centred_x, centred_y, 
+                     self.width, self.length, self.wheel_base)
+
+    def getCentredCoordinates(self):
+        shift = self.wheel_base / 2
+        centred_x = self.shifted_x + shift * cos(self.theta)
+        centred_y = self.shifted_y + shift * sin(self.theta)
+
+        return centred_x, centred_y
+    
 class ObsEnvironment(gym.Env):
     def __init__(self, full_env_name, config):
         self.gear_switch_penalty = True
@@ -120,7 +174,8 @@ class ObsEnvironment(gym.Env):
         self.grid_resolution = 4
         self.grid_shape = (120, 120)
         assert self.grid_shape[0] % self.grid_resolution == 0 \
-                   and self.grid_shape[1] % self.grid_resolution == 0, "incorrect grid shape"
+                   and self.grid_shape[1] % self.grid_resolution == 0, \
+                   "incorrect grid shape"
 
         self.name = full_env_name
         env_config = config["our_env_config"]
@@ -138,12 +193,11 @@ class ObsEnvironment(gym.Env):
         self.obstacle_segments = []
         self.dyn_obstacle_segments = []
         self.last_observations = []
-        self.stepCounter = 0
-        self.vehicle = VehicleConfig(config['car_config'])
+        self.car_config = config['car_config']
+        self.vehicle = Vehicle(self.car_config, ego_car=True)
         self.Tasks = config['Tasks']
         self.maps_init = config['maps']
         self.maps = dict(config['maps'])
-        self.alpha = env_config['alpha']
         self.max_steer = env_config['max_steer']
         self.max_dist = env_config['max_dist']
         self.min_dist = env_config['min_dist']
@@ -157,23 +211,18 @@ class ObsEnvironment(gym.Env):
         self.ANGLE_EPS = degToRad(env_config['ANGLE_EPS'])
         self.SPEED_EPS = env_config['SPEED_EPS']
         self.STEERING_EPS = degToRad(env_config['STEERING_EPS'])
-        self.dl_first_goal = env_config['dl_first_goal']
         self.MAX_DIST_LIDAR = env_config['MAX_DIST_LIDAR']
         self.UPDATE_SPARSE = env_config['UPDATE_SPARSE']
         self.view_angle = degToRad(env_config['view_angle'])
         self.hard_constraints = env_config['hard_constraints']
         self.medium_constraints = env_config['medium_constraints']
         self.soft_constraints = env_config['soft_constraints']
-        self.affine_transform = env_config['affine_transform']
         self.with_potential = env_config['reward_with_potential']
         self.frame_stack = env_config['frame_stack']
-        self.bias_beam = env_config['bias_beam']
         self.use_acceleration_penalties = env_config['use_acceleration_penalties']
         self.use_velocity_goal_penalty = env_config['use_velocity_goal_penalty']
         self.use_different_acc_penalty = env_config['use_different_acc_penalty']
         self.max_episode_steps = env_config['max_polamp_steps']
-        self.dynamic_obstacles = []
-        self.dynamic_obstacles_v_s = []
         self.dyn_acc = 0
         self.dyn_ang_vel = 0
         self.collision_time = 0
@@ -196,7 +245,8 @@ class ObsEnvironment(gym.Env):
             self.reward_weights.append(self.reward_config["differ_Eps"])
         assert self.hard_constraints \
             + self.medium_constraints \
-            + self.soft_constraints == 1, "custom assert: only one constraint is acceptable"
+            + self.soft_constraints == 1, \
+            "only one constraint is acceptable"
 
         state_min_box = [[[-np.inf for j in range(self.grid_shape[1])] 
                 for i in range(self.grid_shape[0])] for _ in range(self.gridCount)]
@@ -236,16 +286,12 @@ class ObsEnvironment(gym.Env):
             else:
                 self.second_goal = None
 
-    def getBB(self, state, width=2.0, length=3.8, ego=True):
-        x = state.x
-        y = state.y
+    def getBB(self, state):
+        x = state.centred_x
+        y = state.centred_y
         angle = state.theta
-        if ego:
-            w = self.vehicle.width / 2
-            l = self.vehicle.length / 2
-        else:
-            w = width
-            l = length
+        w = state.width / 2
+        l = state.length / 2
         BBPoints = [(-l, -w), (l, -w), (l, w), (-l, w)]
         vertices = []
         sinAngle = math.sin(angle)
@@ -317,50 +363,15 @@ class ObsEnvironment(gym.Env):
         return delta
 
     def transformTask(self, from_state, goal_state, 
-                      obstacles, dynamic_obstacles=[]):
-        
-        if self.affine_transform:
-            sx, sy, stheta, sv, sst = from_state
-            gx, gy, gtheta, gv, gst = goal_state
-            self.transform = Transformation()
-            start_transform, goal_transform = self.transform.rotate(
-                                        [sx, sy, stheta], [gx, gy, gtheta])
-            start_transform.append(sv)
-            goal_transform.append(gv)
-            start_transform.append(sst)
-            goal_transform.append(gst)
-
-            new_obstacle_map = []
-            for index in range(len(obstacles)):
-                x, y, theta, width, length = obstacles[index]
-                state = self.transform.rotateState([x, y, theta])
-                new_obstacle_map.append([state[0], state[1],  state[2], width, length])
-            self.obstacle_map = new_obstacle_map
-
-            new_dyn_obstacles = []
-            for index in range(len(dynamic_obstacles)):
-                x, y, theta, v, st = dynamic_obstacles[index]
-                state = self.transform.rotateState([x, y, theta])
-                new_dyn_obstacles.append(State(state[0], state[1], state[2], v, st))
-                
-            self.dynamic_obstacles = new_dyn_obstacles
-        else:
-            start_transform = list(from_state)
-            goal_transform = list(goal_state)
-            new_obstacle_map = []
-            for index in range(len(obstacles)):
-                state = obstacles[index]
-                new_obstacle_map.append([state[0], state[1],  
-                            state[2], state[3], state[4]])
-            self.obstacle_map = new_obstacle_map
-
-            new_dyn_obstacles = []
-            for index in range(len(dynamic_obstacles)):
-                state = dynamic_obstacles[index]
-                new_dyn_obstacles.append(State(state[0], state[1], 
-                            state[2], state[3], state[4]))
-                
-            self.dynamic_obstacles = new_dyn_obstacles
+                      obstacles):
+        start_transform = list(from_state)
+        goal_transform = list(goal_state)
+        new_obstacle_map = []
+        for index in range(len(obstacles)):
+            state = obstacles[index]
+            new_obstacle_map.append([state[0], state[1],  
+                        state[2], state[3], state[4]])
+        self.obstacle_map = new_obstacle_map
 
         start = State(start_transform[0], start_transform[1], 
                       start_transform[2], start_transform[3], 
@@ -371,71 +382,45 @@ class ObsEnvironment(gym.Env):
         
         return start, goal 
 
-    def generateSimpleTask(self, obstacles=[]):
-        if (len(obstacles) > 0):
-            train_tasks = generateTasks(obstacles)
-            start, goal = train_tasks[0]
-
-            return (start, goal)
-
-        start_x = 0
-        start_y = 0
-        goal_x = np.random.randint(self.min_dist, self.max_dist + 1)
-        goal_y = 0
-        start_theta = degToRad(np.random.randint(-self.alpha, self.alpha + 1))
-        goal_theta = degToRad(np.random.randint(-self.alpha, self.alpha + 1))
-        start_v = 0
-        goal_v = np.random.randint(self.min_vel, self.max_vel + 1)
-        start_steer = degToRad(np.random.randint(-self.max_steer, self.max_steer + 1))
-        goal_steer = 0
-        start = [start_x, start_y, start_theta, start_v, start_steer]
-        goal = [goal_x, goal_y, goal_theta, goal_v, goal_steer]
-        
-        return (start, goal)
-
-    def setTask(self, tasks, idx, obstacles, rrt):
-        if len(tasks) == 0:
-            current, goal = self.generateSimpleTask(obstacles)
-            self.current_state, self.goal = self.transformTask(current, goal, 
-                                                obstacles, self.dynamic_obstacles)
-            self.old_state = self.current_state
-
-            return
-
+    def setTask(self, tasks, idx, obstacles, set_task_without_dynamic_obsts):
+        assert len(tasks) > 0, \
+            "incorrect count of tasks must be len(tasks) > 0 but given 0"
         i = np.random.randint(len(tasks)) if idx is None else idx
         current_task = tuple(tasks[i])
         if(len(current_task) == 2):
             current, goal = current_task
         else:
             current, goal, dynamic_obstacles = current_task
-            if not rrt:
-                if (np.random.randint(5) > 0):
-                    for dyn_obst in dynamic_obstacles:
-                        self.dynamic_obstacles.append(dyn_obst)
-                        self.dynamic_obstacles_v_s.append(0)
-            else:
+            if not set_task_without_dynamic_obsts:
                 for dyn_obst in dynamic_obstacles:
-                    self.dynamic_obstacles.append(dyn_obst)
-                    self.dynamic_obstacles_v_s.append(0)
-
+                    vehicle = Vehicle(self.car_config, ego_car=False)
+                    state = State(dyn_obst[0],
+                                  dyn_obst[1],
+                                  dyn_obst[2],
+                                  dyn_obst[3],
+                                  dyn_obst[4])
+                    vehicle.reset(state)
+                    self.vehicles.append(vehicle)
+                    
         self.current_state, self.goal = self.transformTask(
-                            current, goal, obstacles, self.dynamic_obstacles)
+                            current, goal, obstacles)
         self.old_state = self.current_state
+        self.vehicle.reset(self.current_state)
 
-    def reset(self, idx=None, val_key=None, rrt=False):
+    def reset(self, idx=None, val_key=None):
         self.maps = dict(self.maps_init)
         if not self.validate_env:
             self.obst_random_actions = np.random.choice([
                                         True, False, False, False, False])
         else:
             self.obst_random_actions = False
+        set_task_without_dynamic_obsts = np.random.randint(5) == 0
         self.stepCounter = 0
         self.last_observations = []
         self.last_action = [0., 0.]
         self.obstacle_segments = []
         self.dyn_obstacle_segments = []
-        self.dynamic_obstacles = []
-        self.dynamic_obstacles_v_s = []
+        self.vehicles = []
         self.dyn_acc = 0
         self.dyn_ang_vel = 0
         self.dyn_ang_acc = 0
@@ -450,11 +435,10 @@ class ObsEnvironment(gym.Env):
         self.collision_time = 0
         if self.RS_reward:
             self.new_RS = None
-
         self.vehicle.gear = None
         self.vehicle.prev_gear = None
         if self.validate_env:
-            rrt = True
+            set_task_without_dynamic_obsts = False
             if self.validateTestDataset:
                 self.stop_dynamic_step = 1200
                 if val_key == "map0" or val_key == "map2":
@@ -468,24 +452,24 @@ class ObsEnvironment(gym.Env):
         self.map_key = self.lst_keys[index]
         self.obstacle_map = self.maps[self.map_key]
         tasks = self.Tasks[self.map_key]
-        self.setTask(tasks, idx, self.obstacle_map, rrt)
+        self.setTask(tasks, idx, self.obstacle_map, 
+                     set_task_without_dynamic_obsts)
 
         for obstacle in self.obstacle_map:
-            obs = State(obstacle[0], obstacle[1], obstacle[2], 0, 0)
-            width = obstacle[3]
-            length = obstacle[4]
-            self.obstacle_segments.append(self.getBB(obs, width=width, length=length, ego=False))
-
+            obs = State(None, None, theta=obstacle[2], v=0, steer=0, 
+                        centred_x=obstacle[0], centred_y=obstacle[1], 
+                        width=2*obstacle[3], length=2*obstacle[4])
+            self.obstacle_segments.append(
+                self.getBB(obs))
+                
         self.start_dist = self.__goalDist(self.current_state)
         self.last_images = []
         self.grid_static_obst = None
         self.grid_agent = None
         self.grid_with_adding_features = None
-
-        observation = self.get_observation(first_obs=True)
+        observation = self._getObservation(first_obs=True)
     
         return observation
-    
     
     def __reward(self, current_state, new_state, goalReached, 
                 collision, overSpeeding, overSteering):
@@ -561,7 +545,8 @@ class ObsEnvironment(gym.Env):
                 reward.append(0)
                 reward.append(0)
         if self.gear_switch_penalty:
-            if not(self.vehicle.prev_gear is None) and self.vehicle.prev_gear != self.vehicle.gear:
+            if not(self.vehicle.prev_gear is None) and \
+               self.vehicle.prev_gear != self.vehicle.gear:
                 reward.append(-1)
             else:
                 reward.append(0)
@@ -578,8 +563,6 @@ class ObsEnvironment(gym.Env):
         if len(self.obstacle_segments) > 0 or len(self.dyn_obstacle_segments) > 0:
             bounding_box = self.getBB(state)
             for i, obstacle in enumerate(self.obstacle_segments):
-                # if i in lst_indexes:
-                # print("Check collision")
                 if (intersectPolygons(obstacle, bounding_box)):
                     return True
                     
@@ -648,45 +631,19 @@ class ObsEnvironment(gym.Env):
 
         return new_state, overSpeeding, overSteering, v_s
 
-
-    def step(self, action, next_dyn_states=[]):        
+    def step(self, action):        
         info = {}
         isDone = False
         new_state, overSpeeding, overSteering = \
-                self.vehicle.dynamic(self.current_state, action)
-        
-        if len(self.dynamic_obstacles) > 0:
-            dynamic_obstacles = []
-            dynamic_obstacles_v_s = []
-            #if not (self.stepCounter % self.UPDATE_SPARSE):
-            #self.dyn_acc = np.random.randint(-self.vehicle.max_acc, self.vehicle.max_acc + 1)
-            #self.dyn_ang_acc = np.random.randint(-self.vehicle.max_ang_acc, self.vehicle.max_ang_acc)
+                self.vehicle.step(action)
 
-            for index, (dyn_obst, v_s) in enumerate(zip(self.dynamic_obstacles, 
-                                                    self.dynamic_obstacles_v_s)):
-                if len(next_dyn_states) > 0:
-                    x, y, theta, v, st = next_dyn_states[index]
-                    state = self.transform.rotateState([x, y, theta])
-                    new_dyn_obst = State(state[0], state[1], state[2], v, st)
-                else:
-                    dyn_acc = np.random.random() * 2 * \
-                            self.vehicle.max_acc - self.vehicle.max_acc
-                    dyn_ang_acc = np.random.random() * 2 * \
-                            self.vehicle.max_ang_acc - self.vehicle.max_ang_acc
-                    constant_forward = not self.obst_random_actions
-                    new_dyn_obst, _, _, new_v_s = self.obst_dynamic(dyn_obst, 
-                                                    [dyn_acc, dyn_ang_acc], v_s,
-                                                constant_forward=constant_forward)
-                
-                dynamic_obstacles.append(new_dyn_obst)
-                dynamic_obstacles_v_s.append(new_v_s)
-            self.dynamic_obstacles = dynamic_obstacles
-            self.dynamic_obstacles_v_s = dynamic_obstacles_v_s
+        for vehicle in self.vehicles:
+            vehicle.step()
                         
         self.current_state = new_state
         self.last_action = [self.vehicle.a, self.vehicle.Eps]
 
-        observation = self.get_observation()
+        observation = self._getObservation()
 
         #collision
         start_time = time.time()
@@ -719,6 +676,14 @@ class ObsEnvironment(gym.Env):
             self.old_state = self.current_state
         self.stepCounter += 1
         if goalReached or collision or (self.max_episode_steps == self.stepCounter):
+
+            #test
+            if self.stepCounter == 1:
+                print("DEBUG 1 step episode:")
+                print("agent pixels:", self.grid_agent.sum())
+                temp_grid_obst = self.grid_static_obst + self.grid_dynamic_obst
+                print("intersect pixels:", temp_grid_obst[self.grid_agent == 1].sum())
+
             isDone = True
             if goalReached:
                 info["OK"] = True
@@ -741,77 +706,72 @@ class ObsEnvironment(gym.Env):
         
         return observation, reward, isDone, info
 
-
-    def drawBB(self, state, ego=True, draw_arrow=True, color="-c"):
-        a = self.getBB(state, ego=ego)
-        plt.plot([a[(i + 1) % len(a)][0].x for i in range(len(a) + 1)], [a[(i + 1) % len(a)][0].y for i in range(len(a) + 1)], color)
-        if draw_arrow:
-            plt.arrow(state[0], state[1], 2 * math.cos(state[2]), 2 * math.sin(state[2]), head_width=0.5, color='magenta')
-
     def drawObstacles(self, vertices, color="-b"):
         a = vertices
-        plt.plot([a[(i + 1) % len(a)][0].x for i in range(len(a) + 1)], [a[(i + 1) % len(a)][0].y for i in range(len(a) + 1)], color)
-        # if draw_arrow:
-        #     plt.arrow(state[0], state[1], 2 * math.cos(state[2]), 2 * math.sin(state[2]), head_width=0.5, color='magenta')
+        plt.plot([a[(i + 1) % len(a)][0].x for i in range(len(a) + 1)], 
+                 [a[(i + 1) % len(a)][0].y for i in range(len(a) + 1)], color)
+
+    def drawState(self, state, ax, color="-b", 
+                  with_heading=False, heading_color='red'):
+        vertices = self.getBB(state)
+        a = vertices
+        plt.plot([a[(i + 1) % len(a)][0].x for i in range(len(a) + 1)], 
+                 [a[(i + 1) % len(a)][0].y for i in range(len(a) + 1)], color)
+        if with_heading:
+            vehicle_heading = Vec2d(cos(state.theta),
+                                sin(state.theta)) * 2
+            ax.arrow(state.x, state.y,
+                    vehicle_heading.x, vehicle_heading.y, 
+                    width=0.1, head_width=0.3,
+                    color=heading_color)
+    
+    def getCentredCoordinates(self, state):
+        shift = state.wheel_base / 2
+        centred_x = state.x + shift * cos(state.theta)
+        centred_y = state.y + shift * sin(state.theta)
+
+        return centred_x, centred_y
 
     def render(self, reward, figsize=(8, 8), save_image=True):
         fig, ax = plt.subplots(figsize=figsize)
 
         x_delta = self.MAX_DIST_LIDAR
         y_delta = self.MAX_DIST_LIDAR
-
         x_min = self.current_state.x - x_delta
         x_max = self.current_state.x + x_delta
         ax.set_xlim(x_min, x_max)
-
         y_min = self.current_state.y - y_delta
         y_max = self.current_state.y + y_delta
         ax.set_ylim(y_min, y_max)
+
+        for vehicle in self.vehicles:
+            self.drawState(vehicle.getCurrentState(), ax, 
+                           color="-b", with_heading=True, heading_color="magenta")
         
-        if len(self.obstacle_segments) > 0:
-            for obstacle in self.obstacle_segments:
-                self.drawObstacles(obstacle)
-
-        for dyn_obst in self.dynamic_obstacles:
-            width = self.vehicle.width / 2 + 0.3
-            length = self.vehicle.length / 2 + 0.1
-            center_dyn_obst = self.vehicle.shift_state(dyn_obst)
-            agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
-            self.drawObstacles(agentBB)
-            plt.arrow(dyn_obst.x, dyn_obst.y, 2 * math.cos(dyn_obst.theta), 2 * math.sin(dyn_obst.theta), head_width=0.5, color='magenta')
+        for obstacle in self.obstacle_segments:
+            self.drawObstacles(obstacle)
         
-        ax.plot([self.current_state.x, self.goal.x], 
-            [self.current_state.y, self.goal.y], '--r')
+        agent_state = self.vehicle.getCurrentState()
+        self.drawState(agent_state, ax, color="-g", with_heading=True)
 
-        center_state = self.vehicle.shift_state(self.current_state)
-        agentBB = self.getBB(center_state)
-        self.drawObstacles(agentBB, color="-g")
+        self.goal.width = agent_state.width
+        self.goal.length = agent_state.length
+        self.goal.wheel_base = agent_state.wheel_base
+        cented_x, centred_y = self.getCentredCoordinates(self.goal)
+        self.goal.centred_x, self.goal.centred_y = cented_x, centred_y
+        self.drawState(self.goal, ax, color="cyan", with_heading=True)
 
-        center_goal_state = self.vehicle.shift_state(self.goal)
-        agentBB = self.getBB(center_goal_state)
-        self.drawObstacles(agentBB, color="cyan")
-
-        vehicle_heading = Vec2d(cos(center_state.theta),
-                 sin(center_state.theta)) * self.vehicle.length / 2
-        ax.arrow(self.current_state.x, self.current_state.y,
-                 vehicle_heading.x, vehicle_heading.y, width=0.1, head_width=0.3,
-                 color='red')
-
-        goal_heading = Vec2d(cos(center_goal_state.theta),
-             sin(center_goal_state.theta)) * self.vehicle.length / 2
-        ax.arrow(self.goal.x, self.goal.y, goal_heading.x,
-                 goal_heading.y, width=0.1, head_width=0.3, color='cyan')
-
-        dx = self.goal.x - self.current_state.x
-        dy = self.goal.y - self.current_state.y
-        ds =  math.hypot(dx, dy)
+        dx = self.goal.x - agent_state.x
+        dy = self.goal.y - agent_state.y
+        ds = math.hypot(dx, dy)
         step_count = self.stepCounter
-        theta = radToDeg(self.current_state.theta)
-        v = self.current_state.v
-        delta = radToDeg(self.current_state.steer)
-        Eps = self.vehicle.Eps
-        v_s = self.vehicle.v_s
-        a = self.vehicle.a
+        theta = radToDeg(agent_state.theta)
+        v = agent_state.v
+        delta = radToDeg(agent_state.steer)
+        v_s = agent_state.v_s
+        a = agent_state.last_a
+        Eps = agent_state.last_Eps
+        gear = agent_state.gear
 
         reeshep_dist = 0
         if self.RS_reward and not self.new_RS is None:
@@ -827,7 +787,7 @@ class ObsEnvironment(gym.Env):
         
         ax.set_title(f'$step = {step_count:.0f}, ' \
                      + f'ds = {ds:.1f}, dx = {dx:.1f}, dy = {dy:.1f}, ' \
-                     + f'gear = {self.vehicle.gear}, ' \
+                     + f'gear = {gear}, ' \
                      + f'steer={delta:.0f}$ \n $\\theta = {theta:.0f}^\\circ, ' \
                      + f'a = {a:.2f}, E={Eps:.2f}, v = {v:.2f}, v_s={v_s:.2f}, ' \
                      + f'r={reward:.0f}, RS_d={reeshep_dist:.1f}$')
@@ -845,7 +805,7 @@ class ObsEnvironment(gym.Env):
     def close(self):
         pass
 
-    def get_observation(self, first_obs=False):
+    def _getObservation(self, first_obs=False):
         fake_static_obstacles = False
         if len(self.obstacle_segments) == 0:
             fake_static_obstacles = True
@@ -900,7 +860,8 @@ class ObsEnvironment(gym.Env):
             bottom_left_boundary_center_y = -5.5
             road_width_ = 6
             bottom_left_right_dx_ = 0.25
-            self.obstacle_map = generateValetStaticObsts(parking_height, parking_width, 
+            self.obstacle_map = getValetStaticObstsAndUpdateInfo(
+                        parking_height, parking_width, 
                         bottom_left_boundary_height, 
                         upper_boundary_width, upper_boundary_height,
                         bottom_left_boundary_center_x, 
@@ -910,7 +871,8 @@ class ObsEnvironment(gym.Env):
                 obs = State(obstacle[0], obstacle[1], obstacle[2], 0, 0)
                 width = obstacle[3]
                 length = obstacle[4]
-                self.obstacle_segments.append(self.getBB(obs, width=width, length=length, ego=False))
+                self.obstacle_segments.append(
+                    self.getBB(obs, width=width, length=length, ego=False))
         assert len(self.obstacle_segments) > 0, "not static env"
 
         grid_resolution = self.grid_resolution
@@ -939,39 +901,29 @@ class ObsEnvironment(gym.Env):
         if first_obs:
             self.normalized_static_boxes = []
             for obstacle in self.obstacle_segments:
-                self.normalized_static_boxes.append([Point(pair_[0].x - self.normalized_x_init, 
-                                            pair_[0].y - self.normalized_y_init) 
-                                        for pair_ in obstacle])
+                self.normalized_static_boxes.append(
+                    [Point(pair_[0].x - self.normalized_x_init, 
+                     pair_[0].y - self.normalized_y_init) 
+                     for pair_ in obstacle])
 
         #get normalized dynamic boxes
         self.normalized_dynamic_boxes = []
-        for dyn_obst in self.dynamic_obstacles:
-            width = self.vehicle.width / 2 + 0.3
-            length = self.vehicle.length / 2 + 0.1
-            center_dyn_obst = self.vehicle.shift_state(dyn_obst)
-            agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
-            self.normalized_dynamic_boxes.append([Point(max(0, pair_[0].x - self.normalized_x_init), 
-                                         max(0, pair_[0].y - self.normalized_y_init)) 
-                                    for pair_ in agentBB])
-            
+        for vehicle in self.vehicles:
+            vertices = self.getBB(vehicle.getCurrentState())
+            self.normalized_dynamic_boxes.append(
+                    [Point(max(0, pair_[0].x - self.normalized_x_init), 
+                     max(0, pair_[0].y - self.normalized_y_init)) 
+                     for pair_ in vertices])
 
-        center_state = self.vehicle.shift_state(self.current_state)
-        agentBB = self.getBB(center_state)
+        vertices = self.getBB(self.vehicle.getCurrentState())
         self.normalized_agent_box = [Point(max(0, pair_[0].x - self.normalized_x_init), 
-                                         max(0, pair_[0].y - self.normalized_y_init)) 
-                                    for pair_ in agentBB]
-
-        center_goal_state = self.vehicle.shift_state(self.goal)
-        agentBB = self.getBB(center_goal_state)
-        self.normalized_goal_box = [Point(max(0, pair_[0].x - self.normalized_x_init), 
-                                        max(0, pair_[0].y - self.normalized_y_init)) 
-                                    for pair_ in agentBB]
+                                     max(0, pair_[0].y - self.normalized_y_init)) 
+                                     for pair_ in vertices]
 
         #choice grid indexes
         self.all_normilized_boxes = self.normalized_static_boxes.copy()
         self.all_normilized_boxes.extend(self.normalized_dynamic_boxes)
         self.all_normilized_boxes.append(self.normalized_agent_box)
-        self.all_normilized_boxes.append(self.normalized_goal_box)
 
         x_shape, y_shape = self.grid_static_obst.shape
         self.cv_index_boxes = []
@@ -980,10 +932,12 @@ class ObsEnvironment(gym.Env):
             for i in range(len(box_)):
                 prev_x, prev_y = box_[i - 1].x, box_[i - 1].y
                 curr_x, curr_y = box_[i].x, box_[i].y
-                next_x, next_y = box_[(i + 1) % len(box_)].x, box_[(i + 1) % len(box_)].y
+                next_x, next_y = box_[(i + 1) % len(box_)].x, \
+                                 box_[(i + 1) % len(box_)].y
                 x_f, x_ceil = np.modf(curr_x)
                 y_f, y_ceil = np.modf(curr_y)
-                one_x_one = (int(x_ceil * grid_resolution), int(y_ceil * grid_resolution))
+                one_x_one = (int(x_ceil * grid_resolution), 
+                             int(y_ceil * grid_resolution))
                 one_x_one_x_ind = 0
                 one_x_one_y_ind = 0
                 
@@ -1007,13 +961,15 @@ class ObsEnvironment(gym.Env):
                 if x_f == 0:
                     if prev_x <= curr_x and next_x <= curr_x:
                         x_ceil -= 1
-                        one_x_one = (int(x_ceil * grid_resolution), int(y_ceil * grid_resolution))
+                        one_x_one = (int(x_ceil * grid_resolution), 
+                                     int(y_ceil * grid_resolution))
                         one_x_one_x_ind = grid_resolution - 1
 
                 if y_f == 0:
                     if prev_y <= curr_y and next_y <= curr_y:
                         y_ceil -= 1
-                        one_x_one = (int(x_ceil * grid_resolution), int(y_ceil * grid_resolution))
+                        one_x_one = (int(x_ceil * grid_resolution), 
+                                     int(y_ceil * grid_resolution))
                         one_x_one_y_ind = grid_resolution - 1
 
                 index_grid_rev_x = one_x_one[0] + one_x_one_x_ind
@@ -1024,16 +980,16 @@ class ObsEnvironment(gym.Env):
                 box_cv_indexes.append(Point(cv_index_x, cv_index_y))
             self.cv_index_boxes.append(box_cv_indexes)
 
-        self.cv_index_goal_box = self.cv_index_boxes.pop(-1)
         self.cv_index_agent_box = self.cv_index_boxes.pop(-1)
         
         #CV draw
         for ind_box, cv_box in enumerate(self.cv_index_boxes):
-            contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
-                                 [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
+            contours = np.array([[cv_box[3].x, cv_box[3].y], 
+                                 [cv_box[2].x, cv_box[2].y], 
+                                 [cv_box[1].x, cv_box[1].y], 
+                                 [cv_box[0].x, cv_box[0].y]])
             color = 1
             if ind_box >= len(self.normalized_static_boxes):
-                #color = (ind_box - len(self.normalized_static_boxes) + 1) / 10
                 self.grid_dynamic_obst = cv.fillPoly(self.grid_dynamic_obst, 
                                                 pts = [contours], color=color)    
             self.grid_static_obst = cv.fillPoly(self.grid_static_obst, 
@@ -1046,21 +1002,26 @@ class ObsEnvironment(gym.Env):
 
         if not self.adding_ego_features:
             cv_box = self.cv_index_goal_box
-            contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
-                                    [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
-            self.grid_with_adding_features = cv.fillPoly(self.grid_with_adding_features, pts = [contours], color=1)
+            contours = np.array([[cv_box[3].x, cv_box[3].y], 
+                                 [cv_box[2].x, cv_box[2].y], 
+                                 [cv_box[1].x, cv_box[1].y], 
+                                 [cv_box[0].x, cv_box[0].y]])
+            self.grid_with_adding_features = cv.fillPoly(
+                            self.grid_with_adding_features, 
+                            pts = [contours], color=1)
         else:
             adding_features = self.getDiff(self.current_state)
             self.grid_with_adding_features[0, 0:len(adding_features)] = adding_features
             if self.adding_dynamic_features:
-                assert len(self.dynamic_obstacles) <= 2, "dynamic objects more than 2"
-                for ind, dyn_state in enumerate(self.dynamic_obstacles):
-                    self.grid_with_adding_features[ind + 1, 0:4] = [dyn_state.x - self.normalized_x_init, 
-                                                                 dyn_state.y - self.normalized_y_init,
-                                                                 dyn_state.theta,
-                                                                 dyn_state.v]
-            
-        
+                assert len(self.vehicles) <= 2, "dynamic objects more than 2"
+                for ind, vehicle in enumerate(self.vehicles):
+                    dyn_state = vehicle.getCurrentState()
+                    self.grid_with_adding_features[ind + 1, 0:4] \
+                                = [dyn_state.centred_x - self.normalized_x_init, 
+                                   dyn_state.centred_y - self.normalized_y_init,
+                                   dyn_state.theta,
+                                   dyn_state.v]
+
         if fake_static_obstacles:
             self.grid_static_obst = np.zeros(self.grid_shape)
         dim_images = []
@@ -1083,54 +1044,3 @@ class ObsEnvironment(gym.Env):
             self.obstacle_segments = []
 
         return frames_images
-
-
-    def get_dim_image(self, dim, figsize=(0.5, 1)):
-        fig, ax = plt.subplots(figsize=figsize)
-
-        x_delta = self.MAX_DIST_LIDAR
-        y_delta = self.MAX_DIST_LIDAR
-
-        x_min = self.current_state.x - x_delta
-        x_max = self.current_state.x + x_delta
-        #ax.set_xlim(x_min, x_max)
-
-        y_min = self.current_state.y - y_delta
-        y_max = self.current_state.y + y_delta
-        #ax.set_ylim(y_min, y_max)
-        if dim == 1:
-            if len(self.obstacle_segments) > 0:
-                for obstacle in self.obstacle_segments:
-                    self.drawObstacles(obstacle)
-            
-            for dyn_obst in self.dynamic_obstacles:
-                width = self.vehicle.width / 2 + 0.3
-                length = self.vehicle.length / 2 + 0.1
-                center_dyn_obst = self.vehicle.shift_state(dyn_obst)
-                agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
-
-                self.drawObstacles(agentBB)
-                #plt.arrow(dyn_obst.x, dyn_obst.y, 2 * math.cos(dyn_obst.theta), 2 * math.sin(dyn_obst.theta), head_width=0.5, color='magenta')
-        
-        # ax.plot([self.current_state.x, self.goal.x], [self.current_state.y, self.goal.y], '--r')
-
-        if dim == 0:
-            center_state = self.vehicle.shift_state(self.current_state)
-            agentBB = self.getBB(center_state)
-            self.drawObstacles(agentBB, color="-g")
-        if dim == 2:
-            center_goal_state = self.vehicle.shift_state(self.goal)
-            agentBB = self.getBB(center_goal_state)
-            self.drawObstacles(agentBB, color="-r")
-
-        fig.canvas.draw()  # draw the canvas, cache the renderer
-        image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
-        image = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-        #image = image.reshape(1600, 2000, 3)
-        # plt.show()
-        # plt.pause(10)
-        plt.close('all')
-        image = image[:, :, 0] + image[:, :, 1] + image[:, :, 2]
-        image[image > 0] = 255
-
-        return image

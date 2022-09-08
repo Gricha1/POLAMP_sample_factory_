@@ -22,7 +22,7 @@ with open("configs/validate_config.json", 'r') as f:
 
 def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
     save_image = True
-    save_obs = False
+    save_obs = True
     done_save_img = False
     debug_not_done_save_img = False
     debug_forward_move = None
