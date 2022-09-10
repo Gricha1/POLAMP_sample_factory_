@@ -96,10 +96,10 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                 id_start = id_start_forward
                 id_end = eval_tasks
             else:
-                if debug_forward_move: #forward movement
+                if debug_forward_move: # forward movement
                     id_start = id_start_forward
                     id_end = id_start_backward
-                else: #backward movement
+                else: # backward movement
                     id_start = id_start_backward
                     id_end = eval_tasks
             total_tasks += id_end - id_start
@@ -122,7 +122,8 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                 start_time = time.time()
                 obs = env.reset(idx=id, val_key=val_key)
 
-                rnn_states = torch.zeros([env.num_agents, get_hidden_size(cfg)], dtype=torch.float32, device=device)
+                rnn_states = torch.zeros([env.num_agents, get_hidden_size(cfg)], 
+                                         dtype=torch.float32, device=device)
                 episode_reward = np.zeros(env.num_agents)
                 finished_episode = [False] * env.num_agents
                 done = [False]
@@ -137,14 +138,14 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                         obs_torch = AttrDict(transform_dict_observations(obs))
                         for key, x in obs_torch.items():
                             obs_torch[key] = torch.from_numpy(x).to(device).float()
-                        policy_outputs = actor_critic(obs_torch, rnn_states, with_action_distribution=True)
+                        policy_outputs = actor_critic(obs_torch, rnn_states, 
+                                                      with_action_distribution=True)
 
-                        # sample actions from the distribution by default
                         actions = policy_outputs.actions
 
                         action_distribution = policy_outputs.action_distribution
                         if isinstance(action_distribution, ContinuousActionDistribution):
-                            if not cfg.continuous_actions_sample:  # TODO: add similar option for discrete actions
+                            if not cfg.continuous_actions_sample:  
                                 actions = action_distribution.means
 
                         actions = actions.cpu().numpy()
@@ -185,9 +186,15 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                                 if done_flag:
                                     finished_episode[agent_i] = True
                                     episode_rewards[agent_i].append(episode_reward[agent_i])
-                                    true_rewards[agent_i].append(infos[agent_i].get('true_reward', episode_reward[agent_i]))
-                                    log.info('Episode finished for agent %d at %d frames. Reward: %.3f, true_reward: %.3f', agent_i, num_frames, episode_reward[agent_i], true_rewards[agent_i][-1])
-                                    rnn_states[agent_i] = torch.zeros([get_hidden_size(cfg)], dtype=torch.float32, device=device)
+                                    true_rewards[agent_i].append(infos[agent_i].get('true_reward', 
+                                                                 episode_reward[agent_i]))
+                                    log.info('Episode finished for agent %d at %d frames. ' \
+                                             + 'Reward: %.3f, true_reward: %.3f', \
+                                             agent_i, num_frames, episode_reward[agent_i], 
+                                             true_rewards[agent_i][-1])
+                                    rnn_states[agent_i] = torch.zeros(
+                                                            [get_hidden_size(cfg)], 
+                                                            dtype=torch.float32, device=device)
                                     episode_reward[agent_i] = 0
 
                             episode_done = False
@@ -217,6 +224,10 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                                         if avg_true_reward_str:
                                             avg_true_reward_str += ', '
                                         avg_true_reward_str += f'#{agent_i}: {avg_true_rew:.3f}'
+
+                            # test
+                            #if num_frames == 1 and "Collision" not in infos[0]:
+                            #    break
 
                 done = False
                 if not ("Collision" in infos[0]) and not ("SoftEps" in infos[0]) \

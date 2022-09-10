@@ -12,9 +12,9 @@ def getTrainValidateTasks(tasks_config, car_config, train):
         where task1 = ([stat_obst_1, ...], [start, goal], [dyn_obst_1, ...])
     """
     tasks = [] 
-    for case_num in range(1, 10):
+    for case_num in range(1, 12 + 1):
         #test
-        if case_num != 8:
+        if case_num != 1:
             continue
 
         train_case_tasks = getCaseTasks(case_num,
@@ -150,16 +150,24 @@ def trySatisfyCollisionConditions(staticObstsInfo,
 
     agent_x, agent_y, agent_theta, agent_v, agent_steer = agent_task[0]
     goal_x, goal_y, goal_theta, goal_v, goal_steer = agent_task[1]
-    dyn_x, dyn_y, dyn_theta, dyn_v, dyn_steer = dynamic_obsts[0]
+    dyn_x, dyn_y, dyn_theta, dyn_v, dyn_steer, movement_func = dynamic_obsts[0]
 
     agent = [agent_x, agent_y, agent_theta, agent_v, agent_steer]
     goal = [goal_x, goal_y, goal_theta, goal_v, goal_steer]
     agent_task = [agent, goal]
-    dynamic_obsts = [[dyn_x, dyn_y, dyn_theta, dyn_v, dyn_steer]]
+    dynamic_obsts = [[dyn_x, dyn_y, dyn_theta, dyn_v, dyn_steer, movement_func]]
 
     return static_obsts, agent_task, dynamic_obsts
 
 def getCaseValetDynamicObst(staticObstsInfo, car_config, case_num):
+    """
+    return:
+        [dynamic] where dynamic = [x, y, theta, v, steer, dynamic_config]
+                        or dynamic = [] if no dynamic obst
+    """
+    dynamic_config = {}
+    dynamic_config["case"] = case_num
+    dynamic_config["movement_func_params"] = {}
     parking_height = staticObstsInfo["parking_height"]
     parking_width = staticObstsInfo["parking_width"]
     road_width = staticObstsInfo["road_width"]
@@ -177,13 +185,77 @@ def getCaseValetDynamicObst(staticObstsInfo, car_config, case_num):
     shift_from_static_boundary = 1.2
 
     if case_num == 1:
-        dynamics = []
+        x_min = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height / 2 \
+                + wheel_base / 2 - shift_for_dynamic_dx 
+        x_max = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height \
+                + 2 * bottom_left_boundary_height \
+                + wheel_base / 2 + shift_for_dynamic_dx 
+        y_min = buttom_road_edge_y + road_width + shift_for_dynamic_dy
+        y_max = buttom_road_edge_y + 2 * road_width \
+                - car_width / 2 + shift_from_static_boundary
+        theta_min = degToRad(178)
+        theta_max = degToRad(182)
+        init_v_min = 0.2
+        init_v_max = 0.7
+        steer_min = 0
+        steer_max = 0
+
     elif case_num == 2:
-        dynamics = []
+        x_min = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height / 2 \
+                + wheel_base / 2 - shift_for_dynamic_dx 
+        x_max = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height \
+                + 2 * bottom_left_boundary_height \
+                + wheel_base / 2 + shift_for_dynamic_dx 
+        y_min = buttom_road_edge_y + road_width + shift_for_dynamic_dy
+        y_max = buttom_road_edge_y + 2 * road_width \
+                - car_width / 2 + shift_from_static_boundary
+        theta_min = degToRad(178)
+        theta_max = degToRad(182)
+        init_v_min = 0.2
+        init_v_max = 0.7
+        steer_min = 0
+        steer_max = 0
+ 
     elif case_num == 3:
-        dynamics = []
+        x_min = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height / 2 \
+                + wheel_base / 2 - shift_for_dynamic_dx 
+        x_max = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height \
+                + 2 * bottom_left_boundary_height \
+                + wheel_base / 2 + shift_for_dynamic_dx 
+        y_min = buttom_road_edge_y + car_width / 2 \
+                + shift_from_static_boundary - shift_for_dynamic_dy
+        y_max = buttom_road_edge_y + road_width
+        theta_min = degToRad(178)
+        theta_max = degToRad(182)
+        init_v_min = 0.2
+        init_v_max = 0.7
+        steer_min = 0
+        steer_max = 0
+
     elif case_num == 4:
-        dynamics = []
+        x_min = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height / 2 \
+                + wheel_base / 2 - shift_for_dynamic_dx 
+        x_max = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height + parking_height \
+                + 2 * bottom_left_boundary_height \
+                + wheel_base / 2 + shift_for_dynamic_dx 
+        y_min = buttom_road_edge_y + car_width / 2 \
+                + shift_from_static_boundary - shift_for_dynamic_dy
+        y_max = buttom_road_edge_y + road_width
+        theta_min = degToRad(178)
+        theta_max = degToRad(182)
+        init_v_min = 0.2
+        init_v_max = 0.7
+        steer_min = 0
+        steer_max = 0    
+
     elif case_num == 5:
         x_min = bottom_left_boundary_center_x \
                 + bottom_left_boundary_height + parking_height / 2 \
@@ -197,8 +269,8 @@ def getCaseValetDynamicObst(staticObstsInfo, car_config, case_num):
                 - car_width / 2 + shift_from_static_boundary
         theta_min = degToRad(178)
         theta_max = degToRad(182)
-        v_min = 0.2
-        v_max = 0.7
+        init_v_min = 0.2
+        init_v_max = 0.7
         steer_min = 0
         steer_max = 0
 
@@ -215,14 +287,96 @@ def getCaseValetDynamicObst(staticObstsInfo, car_config, case_num):
         y_max = buttom_road_edge_y + road_width
         theta_min = degToRad(178)
         theta_max = degToRad(182)
-        v_min = 0.2
-        v_max = 0.7
+        init_v_min = 0.2
+        init_v_max = 0.7
         steer_min = 0
         steer_max = 0
 
     elif case_num == 7:
-        pass
+        x_min = bottom_left_boundary_center_x \
+                - bottom_left_boundary_height \
+                + car_config["length"] / 2 \
+                - car_config["wheel_base"] / 2 \
+                - shift_for_dynamic_dx 
+        x_max = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height \
+                - car_config["length"] / 2 \
+                - car_config["wheel_base"] / 2 \
+                + shift_for_dynamic_dx 
+        y_min = buttom_road_edge_y + car_width / 2 \
+                + shift_from_static_boundary - shift_for_dynamic_dy
+        y_max = buttom_road_edge_y + road_width
+        theta_min = degToRad(0 - 2)
+        theta_max = degToRad(0 + 2)
+        init_v_min = 0.2
+        init_v_max = 0.7
+        steer_min = 0
+        steer_max = 0
+
     elif case_num == 8:
+        x_min = bottom_left_boundary_center_x \
+                - bottom_left_boundary_height \
+                + car_config["length"] / 2 \
+                - car_config["wheel_base"] / 2 \
+                - shift_for_dynamic_dx 
+        x_max = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height \
+                - car_config["length"] / 2 \
+                - car_config["wheel_base"] / 2 \
+                + shift_for_dynamic_dx 
+        y_min = buttom_road_edge_y + road_width + shift_for_dynamic_dy
+        y_max = buttom_road_edge_y + 2 * road_width \
+                - car_width / 2 + shift_from_static_boundary
+        theta_min = degToRad(0 - 2)
+        theta_max = degToRad(0 + 2)
+        init_v_min = 0.2
+        init_v_max = 0.7
+        steer_min = 0
+        steer_max = 0
+            
+    elif case_num == 9:
+        x_min = bottom_left_boundary_center_x \
+                - bottom_left_boundary_height \
+                + car_config["length"] / 2 \
+                - car_config["wheel_base"] / 2 \
+                - shift_for_dynamic_dx 
+        x_max = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height \
+                - car_config["length"] / 2 \
+                - car_config["wheel_base"] / 2 \
+                + shift_for_dynamic_dx 
+        y_min = buttom_road_edge_y + road_width + shift_for_dynamic_dy
+        y_max = buttom_road_edge_y + 2 * road_width \
+                - car_width / 2 + shift_from_static_boundary
+        theta_min = degToRad(0 - 2)
+        theta_max = degToRad(0 + 2)
+        init_v_min = 0.2
+        init_v_max = 0.7
+        steer_min = 0
+        steer_max = 0
+         
+    elif case_num == 10:
+        x_min = bottom_left_boundary_center_x \
+                - bottom_left_boundary_height \
+                + car_config["length"] / 2 \
+                - car_config["wheel_base"] / 2 \
+                - shift_for_dynamic_dx 
+        x_max = bottom_left_boundary_center_x \
+                + bottom_left_boundary_height \
+                - car_config["length"] / 2 \
+                - car_config["wheel_base"] / 2 \
+                + shift_for_dynamic_dx 
+        y_min = buttom_road_edge_y + road_width + shift_for_dynamic_dy
+        y_max = buttom_road_edge_y + 2 * road_width \
+                - car_width / 2 + shift_from_static_boundary
+        theta_min = degToRad(0 - 2)
+        theta_max = degToRad(0 + 2)
+        init_v_min = 0.2
+        init_v_max = 0.7
+        steer_min = 0
+        steer_max = 0
+        
+    elif case_num == 11:
         from_bottom_parking_place = np.random.choice([True, False])
         x_min = bottom_left_boundary_center_x - shift_for_dynamic_dx
         x_max = bottom_left_boundary_center_x \
@@ -242,12 +396,12 @@ def getCaseValetDynamicObst(staticObstsInfo, car_config, case_num):
                 + shift_for_dynamic_dx
             theta_min = degToRad(270 - 40)
             theta_max = degToRad(270 + 40)
-        v_min = 0.2
-        v_max = 0.7
+        init_v_min = 0.2
+        init_v_max = 0.7
         steer_min = 0
         steer_max = 0
 
-    elif case_num == 9:
+    elif case_num == 12:
         from_bottom_parking_place = np.random.choice([True, False])
         x_min = bottom_left_boundary_center_x \
                 - bottom_left_boundary_height - shift_for_dynamic_dx
@@ -268,22 +422,100 @@ def getCaseValetDynamicObst(staticObstsInfo, car_config, case_num):
                 + shift_for_dynamic_dx
             theta_min = degToRad(268)
             theta_max = degToRad(272)
-        v_min = 0.2
-        v_max = 0.7
+        init_v_min = 0.2
+        init_v_max = 0.7
         steer_min = 0
         steer_max = 0
 
     dynamic = generateCar(x_min, x_max, 
-                             y_min, y_max,
-                             theta_min, theta_max, 
-                             v_min, v_max,
-                             steer_min, steer_max)
+                          y_min, y_max,
+                          theta_min, theta_max, 
+                          init_v_min, init_v_max,
+                          steer_min, steer_max)
     if len(dynamic) == 0:
         return []
 
+    # movement function for dynamic obst
+    boundary_v_max = 1
+    boundary_v_min = 0.2
+    dynamic_config["boundary_v"] = np.random.choice(
+                        np.linspace(boundary_v_min, boundary_v_max, 10))
+    a_min_possible = 0
+    a_max_possible = 1
+    a_max = np.random.choice(np.linspace(a_min_possible, a_max_possible, 20))
+    Eps_min_possible = 0
+    Eps_max_possible = 0
+    Eps_max = np.random.choice(np.linspace(Eps_min_possible, Eps_max_possible, 20))
+    boundary_action = [a_max, Eps_max]
+    dynamic_config["movement_func_params"] = {"boundary_action": boundary_action}
+    if case_num == 1 or case_num == 2 or case_num == 3 or \
+            case_num == 4 or case_num == 9 or case_num == 10:
+        if case_num == 2 or case_num == 4 or case_num == 10:
+            stop_steps = list(range(90, 200))
+        else:
+            stop_steps = list(range(30, 70))
+        stop_step = np.random.choice(stop_steps)
+        dynamic_config["movement_func_params"]["stop_step"] = stop_step
+        #dynamic_do_reverse_after_stop = np.random.choice([True, False, False])
+
+        #test
+        dynamic_do_reverse_after_stop = True
+
+        dynamic_config["movement_func_params"]["dynamic_do_reverse_after_stop"] \
+                                                    = dynamic_do_reverse_after_stop
+        if dynamic_do_reverse_after_stop:
+            reverse_steps = list(range(10, 40))
+            reverse_step = np.random.choice(stop_steps)
+            dynamic_config["movement_func_params"]["reverse_step"] \
+                                                    = reverse_step
+
+
+        def move(last_state, current_steps, time_step=0.1, **args):
+            a = np.random.choice(
+                    np.linspace(0, boundary_action[0], 10))
+            Eps = np.random.choice(
+                    np.linspace(0, boundary_action[1], 10))
+            if current_steps >= stop_step:
+                if last_state[3] > 0:
+                    a = -min(boundary_action[0], last_state[3] / time_step)
+                elif last_state[3] == 0:
+                    a = 0
+            if dynamic_do_reverse_after_stop and current_steps >= stop_step and \
+                    last_state[3] <= 0 and current_steps < stop_step + reverse_step:
+                a = -np.random.choice(
+                    np.linspace(0, boundary_action[0], 10))
+            if dynamic_do_reverse_after_stop and current_steps >= stop_step + reverse_step:
+                if last_state[3] < 0:
+                    a = min(boundary_action[0], abs(last_state[3]) / time_step)
+                elif last_state[3] == 0:
+                    a = 0
+            action = [a, Eps]
+
+            return action
+        dynamic_config["movement_func"] = move
+    elif case_num == 5 or case_num == 6 or case_num == 7 or \
+            case_num == 8 or case_num == 11 or case_num == 12:
+        a_min_possible = 0
+        a_max_possible = 1
+        a_max = np.random.choice(np.linspace(a_min_possible, a_max_possible, 20))
+        Eps_min_possible = 0
+        Eps_max_possible = 0
+        Eps_max = np.random.choice(np.linspace(Eps_min_possible, Eps_max_possible, 20))
+        boundary_action = [a_max, Eps_max]
+        def move(last_state, current_steps, time_step=0.1, **args):
+            a = np.random.choice(
+                    np.linspace(0, boundary_action[0], 10))
+            Eps = np.random.choice(
+                    np.linspace(0, boundary_action[1], 10))
+            action = [a, Eps]
+
+            return action
+        dynamic_config["movement_func"] = move
+
     dynamic = trySatisfyDynamicConditions(staticObstsInfo,
-                                           car_config,
-                                           dynamic)
+                                          car_config,
+                                          dynamic)
+    dynamic.append(dynamic_config)
 
     return [dynamic]
 
@@ -315,12 +547,12 @@ def trySatisfyDynamicConditions(staticObstsInfo, car_config, dynamic):
 def generateCar(x_min, x_max, 
                 y_min, y_max,
                 theta_min, theta_max, 
-                v_min, v_max,
+                init_v_min, init_v_max,
                 steer_min, steer_max):
     x_s = np.linspace(x_min, x_max, 10)
     y_s = np.linspace(y_min, y_max, 10)
     theta_s = np.linspace(theta_min, theta_max, 5)
-    v_s = np.linspace(v_min, v_max, 5)
+    v_s = np.linspace(init_v_min, init_v_max, 5)
     steer_s = np.linspace(steer_min, steer_max, 5)
     
     x = np.random.choice(x_s)

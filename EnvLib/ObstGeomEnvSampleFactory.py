@@ -38,13 +38,12 @@ class State:
 class Vehicle:
     def __init__(self, car_config, ego_car):
         self.ego_car = ego_car
-        if ego_car:
-            self.length = car_config["length"]
-            self.width = car_config["width"]
-        else:
+        self.length = car_config["length"]
+        self.width = car_config["width"]
+        if not ego_car:
             safe_buffer = 0.6
-            self.length = car_config["length"] + safe_buffer
-            self.width = car_config["width"] + safe_buffer
+            self.length += safe_buffer
+            self.width += safe_buffer
         self.wheel_base = car_config["wheel_base"]
         self.safe_eps = car_config["safe_eps"]
         self.max_steer = degToRad(car_config["max_steer"])
@@ -53,14 +52,33 @@ class Vehicle:
         self.max_acc = car_config["max_acc"]
         self.max_ang_vel = car_config["max_ang_vel"]
         self.max_ang_acc = car_config["max_ang_acc"]
+        if not ego_car:
+            self.max_vel = 1
+            self.min_vel = -1
         self.delta_t = car_config["delta_t"]
         self.use_clip = car_config["use_clip"]
         if "movement_function" not in car_config:
             self.movement_function = None
         else:
             self.movement_function = car_config["movement_function"]
-        
-    def reset(self, state):
+
+    def get_action(self):
+        assert not self.ego_car, "this function for dynamic obsts in env only"
+        dt = self.delta_t
+        x = self.shifted_x
+        y = self.shifted_y
+        theta = self.theta
+        v = self.v
+        steer = self.steer
+        v_s = self.v_s
+        gear = self.gear
+        a, Eps = self.movement_func([x, y, theta, v, steer], 
+                                     self.current_steps, 
+                                     **self.movement_func_params)
+
+        return [a, Eps]
+
+    def reset(self, state, dynamic_config=None):
         self.last_a = 0
         self.last_Eps = 0
         self.shifted_x = state.x
@@ -71,6 +89,14 @@ class Vehicle:
         self.v_s = 0
         self.w = 0
         self.gear = None
+        if not self.ego_car:
+            self.max_vel = 1
+            self.max_vel = -1
+            self.movement_func = dynamic_config["movement_func"]
+            self.movement_func_params = dynamic_config["movement_func_params"]
+            self.max_vel = dynamic_config["boundary_v"]
+            self.min_vel = -dynamic_config["boundary_v"]
+        self.current_steps = 0
 
     def step(self, action=None):
         dt = self.delta_t
@@ -82,17 +108,15 @@ class Vehicle:
         v_s = self.v_s
         gear = self.gear
 
-        if not self.ego_car:
-            a = 0
-            Eps = 0
-        else:
-            assert not(action is None), \
-                "action cant be None for ego_car in step function"
-            a = action[0]
-            Eps = action[1]
-            if self.use_clip:
-                a = np.clip(a, -self.max_acc, self.max_acc)
-                Eps = np.clip(Eps, -self.max_ang_acc, self.max_ang_acc)
+        assert not(action is None), \
+            "action must exist for the vehicle in the step function"
+        assert len(action) == 2, "action len should be 2" + \
+            f"but given {len(action)}"
+        a = action[0]
+        Eps = action[1]
+        if self.use_clip:
+            a = np.clip(a, -self.max_acc, self.max_acc)
+            Eps = np.clip(Eps, -self.max_ang_acc, self.max_ang_acc)
 
         dV = a * dt
         new_v = v + dV
@@ -144,6 +168,7 @@ class Vehicle:
         self.w = w
         self.gear = new_gear
         new_state = State(new_x, new_y, new_theta, new_v, steer)
+        self.current_steps += 1
 
         return new_state, overSpeeding, overSteering
     
@@ -186,10 +211,7 @@ class ObsEnvironment(gym.Env):
             if self.validateTestDataset:
                 print("DEBUG: VALIDATE TEST DATASET")
         self.reward_config = config["reward_config"]
-        self.goal = None
-        self.current_state = None
         self.old_state = None
-        self.last_action = [0., 0.]
         self.obstacle_segments = []
         self.dyn_obstacle_segments = []
         self.last_observations = []
@@ -286,7 +308,7 @@ class ObsEnvironment(gym.Env):
             else:
                 self.second_goal = None
 
-    def getBB(self, state):
+    def _getBB(self, state):
         x = state.centred_x
         y = state.centred_y
         angle = state.theta
@@ -307,42 +329,7 @@ class ObsEnvironment(gym.Env):
         
         return segments
 
-    def getRelevantSegments(self, state, with_angles=False):
-        relevant_obstacles = []
-        obstacles = list(self.obstacle_segments)
-        obstacles.extend(self.dyn_obstacle_segments)
-        for obst in obstacles:
-            new_segments = []
-            for segment in obst:
-                d1 = math.hypot(state.x - segment[0].x, state.y - segment[0].y)
-                d2 = math.hypot(state.x - segment[1].x, state.y - segment[1].y)
-                new_segments.append((min(d1, d2), segment)) 
-            new_segments.sort(key=lambda s: s[0])
-            new_segments = [pair[1] for pair in new_segments[:2]]
-            if not with_angles:
-                relevant_obstacles.append(new_segments)
-            else:
-                new_segments_with_angle = []
-                angles = []
-                for segment in new_segments:
-                    angle1 = math.atan2(segment[0].y - state.y, segment[0].x - state.x)
-                    angle2 = math.atan2(segment[1].y - state.y, segment[1].x - state.x)
-                    min_angle = min(angle1, angle2)
-                    max_angle = max(angle1, angle2)
-                    new_segments_with_angle.append(((min_angle, max_angle), segment))
-                    angles.append((min_angle, max_angle))
-                if angleIntersection(angles[0][0], angles[0][1], angles[1][0]) and \
-                    angleIntersection(angles[0][0], angles[0][1], angles[1][1]):
-                    relevant_obstacles.append([new_segments_with_angle[0]])
-                elif angleIntersection(angles[1][0], angles[1][1], angles[0][0]) and \
-                    angleIntersection(angles[1][0], angles[1][1], angles[0][1]):
-                    relevant_obstacles.append([new_segments_with_angle[1]])
-                else:
-                    relevant_obstacles.append(new_segments_with_angle)
-                    
-        return relevant_obstacles
-
-    def getDiff(self, state):
+    def _getDiff(self, state):
         if self.goal is None:
             self.goal = state
         delta = []
@@ -354,10 +341,7 @@ class ObsEnvironment(gym.Env):
         theta = state.theta
         v = state.v
         steer = state.steer
-        v_s = self.vehicle.v_s
-        w = self.vehicle.w
-        a = self.vehicle.a
-        Eps = self.vehicle.Eps
+        v_s = state.v_s
         delta.extend([dx, dy, dtheta, dv, dsteer, theta, v, steer, v_s])
         
         return delta
@@ -382,7 +366,7 @@ class ObsEnvironment(gym.Env):
         
         return start, goal 
 
-    def setTask(self, tasks, idx, obstacles, set_task_without_dynamic_obsts):
+    def _setTask(self, tasks, idx, obstacles, set_task_without_dynamic_obsts):
         assert len(tasks) > 0, \
             "incorrect count of tasks must be len(tasks) > 0 but given 0"
         i = np.random.randint(len(tasks)) if idx is None else idx
@@ -399,7 +383,7 @@ class ObsEnvironment(gym.Env):
                                   dyn_obst[2],
                                   dyn_obst[3],
                                   dyn_obst[4])
-                    vehicle.reset(state)
+                    vehicle.reset(state, dyn_obst[5])
                     self.vehicles.append(vehicle)
                     
         self.current_state, self.goal = self.transformTask(
@@ -409,11 +393,6 @@ class ObsEnvironment(gym.Env):
 
     def reset(self, idx=None, val_key=None):
         self.maps = dict(self.maps_init)
-        if not self.validate_env:
-            self.obst_random_actions = np.random.choice([
-                                        True, False, False, False, False])
-        else:
-            self.obst_random_actions = False
         set_task_without_dynamic_obsts = np.random.randint(5) == 0
         self.stepCounter = 0
         self.last_observations = []
@@ -424,19 +403,19 @@ class ObsEnvironment(gym.Env):
         self.dyn_acc = 0
         self.dyn_ang_vel = 0
         self.dyn_ang_acc = 0
-        self.vehicle.v_s = 0
-        self.vehicle.w = 0
-        self.vehicle.Eps = 0
-        self.vehicle.a = 0
-        self.vehicle.j_a = 0
-        self.vehicle.j_Eps = 0
-        self.vehicle.prev_a = 0
-        self.vehicle.prev_Eps = 0
+        #self.vehicle.v_s = 0
+        #self.vehicle.w = 0
+        #self.vehicle.Eps = 0
+        #self.vehicle.a = 0
+        #self.vehicle.j_a = 0
+        #self.vehicle.j_Eps = 0
+        #self.vehicle.prev_a = 0
+        #self.vehicle.prev_Eps = 0
         self.collision_time = 0
         if self.RS_reward:
             self.new_RS = None
-        self.vehicle.gear = None
-        self.vehicle.prev_gear = None
+        #self.vehicle.gear = None
+        #self.vehicle.prev_gear = None
         if self.validate_env:
             set_task_without_dynamic_obsts = False
             if self.validateTestDataset:
@@ -452,7 +431,7 @@ class ObsEnvironment(gym.Env):
         self.map_key = self.lst_keys[index]
         self.obstacle_map = self.maps[self.map_key]
         tasks = self.Tasks[self.map_key]
-        self.setTask(tasks, idx, self.obstacle_map, 
+        self._setTask(tasks, idx, self.obstacle_map, 
                      set_task_without_dynamic_obsts)
 
         for obstacle in self.obstacle_map:
@@ -460,9 +439,9 @@ class ObsEnvironment(gym.Env):
                         centred_x=obstacle[0], centred_y=obstacle[1], 
                         width=2*obstacle[3], length=2*obstacle[4])
             self.obstacle_segments.append(
-                self.getBB(obs))
+                self._getBB(obs))
                 
-        self.start_dist = self.__goalDist(self.current_state)
+        self.start_dist = self._goalDist(self.current_state)
         self.last_images = []
         self.grid_static_obst = None
         self.grid_agent = None
@@ -471,11 +450,11 @@ class ObsEnvironment(gym.Env):
     
         return observation
     
-    def __reward(self, current_state, new_state, goalReached, 
+    def _reward(self, current_state, new_state, goalReached, 
                 collision, overSpeeding, overSteering):
         if not self.RS_reward:
-            previous_delta = self.__goalDist(current_state)
-            new_delta = self.__goalDist(new_state)
+            previous_delta = self._goalDist(current_state)
+            new_delta = self._goalDist(new_state)
         reward = []
 
         reward.append(-1 if collision else 0)
@@ -555,81 +534,8 @@ class ObsEnvironment(gym.Env):
 
         return np.matmul(self.reward_weights, reward)
 
-    def isCollision(self, state, min_beam, lst_indexes=[]):
-        
-        if (self.vehicle.min_dist_to_check_collision < min_beam):
-            return False
-
-        if len(self.obstacle_segments) > 0 or len(self.dyn_obstacle_segments) > 0:
-            bounding_box = self.getBB(state)
-            for i, obstacle in enumerate(self.obstacle_segments):
-                if (intersectPolygons(obstacle, bounding_box)):
-                    return True
-                    
-            for obstacle in self.dyn_obstacle_segments:
-                mid_x = (obstacle[0][0].x + obstacle[1][1].x) / 2.
-                mid_y = (obstacle[0][0].y + obstacle[1][1].y) / 2.
-                distance = math.hypot(mid_x - state.x, mid_y - state.y)    
-                #if (distance > (self.vehicle.min_dist_to_check_collision)):
-                dyn_obst_corner_x = obstacle[0][0].x
-                dyn_obst_corner_y = obstacle[0][0].y
-                dyn_obst_radius = math.hypot(mid_x - dyn_obst_corner_x, 
-                                             mid_y - dyn_obst_corner_y)
-                #if (distance > (self.vehicle.car_radius + dyn_obst_radius)):
-                #    continue
-                if (distance > (self.vehicle.min_dist_to_check_collision + dyn_obst_radius)):
-                    continue
-                if (intersectPolygons(obstacle, bounding_box)):
-                    return True
-            
-        return False
-
-    def __goalDist(self, state):
+    def _goalDist(self, state):
         return math.hypot(self.goal.x - state.x, self.goal.y - state.y)
-
-    def obst_dynamic(self, state, action, previous_v_s, constant_forward=True):
-        a = action[0]
-        Eps = action[1]
-        dt = self.vehicle.delta_t
-        if constant_forward:
-            a = 0
-            Eps = 0
-        if self.validate_env and self.validateTestDataset and \
-                self.stepCounter >= self.stop_dynamic_step:
-            a = 0
-            Eps = 0
-        elif self.validate_env and self.validateTestDataset and \
-                (self.stepCounter + 5) >= self.stop_dynamic_step:
-            a = -1
-            Eps = 0
-
-        dV = a * dt
-        V = state.v + dV
-        overSpeeding = V > self.vehicle.max_vel or V < self.vehicle.min_vel
-        
-        if not constant_forward:
-            V = np.clip(V, self.vehicle.min_vel, self.vehicle.max_vel)
-
-        dv_s = Eps * dt
-        v_s = previous_v_s + dv_s
-        v_s = np.clip(v_s, -self.vehicle.max_ang_vel, self.vehicle.max_ang_vel)
-        dsteer = v_s * dt
-        steer = normalizeAngle(state.steer + dsteer)
-        overSteering = abs(steer) > self.vehicle.max_steer
-        steer = np.clip(steer, -self.vehicle.max_steer, self.vehicle.max_steer)
-
-        w = (V * np.tan(steer) / self.vehicle.wheel_base)
-        dtheta = w * dt
-        theta = normalizeAngle(state.theta + dtheta)
-
-        dx = V * np.cos(theta) * dt
-        dy = V * np.sin(theta) * dt
-        x = state.x + dx
-        y = state.y + dy
-
-        new_state = State(x, y, theta, V, steer)
-
-        return new_state, overSpeeding, overSteering, v_s
 
     def step(self, action):        
         info = {}
@@ -638,10 +544,11 @@ class ObsEnvironment(gym.Env):
                 self.vehicle.step(action)
 
         for vehicle in self.vehicles:
-            vehicle.step()
+            action = vehicle.get_action()
+            vehicle.step(action)
                         
         self.current_state = new_state
-        self.last_action = [self.vehicle.a, self.vehicle.Eps]
+        self.last_action = action
 
         observation = self._getObservation()
 
@@ -653,7 +560,7 @@ class ObsEnvironment(gym.Env):
         end_time = time.time()
         self.collision_time += (end_time - start_time)
         
-        distanceToGoal = self.__goalDist(new_state)
+        distanceToGoal = self._goalDist(new_state)
         info["EuclideanDistance"] = distanceToGoal
         if self.hard_constraints:
             goalReached = distanceToGoal < self.HARD_EPS and abs(
@@ -666,7 +573,7 @@ class ObsEnvironment(gym.Env):
             goalReached = distanceToGoal < self.SOFT_EPS
 
         if not self.validate_env:
-            reward = self.__reward(self.old_state, new_state, 
+            reward = self._reward(self.old_state, new_state, 
                                 goalReached, collision, overSpeeding, 
                                 overSteering)
         else:
@@ -700,9 +607,6 @@ class ObsEnvironment(gym.Env):
             info["terminal_heading"] = self.current_state.theta
             info["terminal_w"] = self.vehicle.w
             info["terminal_v_s"] = self.vehicle.v_s
-
-        self.vehicle.prev_a = self.vehicle.a
-        self.vehicle.prev_Eps = self.vehicle.Eps
         
         return observation, reward, isDone, info
 
@@ -713,7 +617,7 @@ class ObsEnvironment(gym.Env):
 
     def drawState(self, state, ax, color="-b", 
                   with_heading=False, heading_color='red'):
-        vertices = self.getBB(state)
+        vertices = self._getBB(state)
         a = vertices
         plt.plot([a[(i + 1) % len(a)][0].x for i in range(len(a) + 1)], 
                  [a[(i + 1) % len(a)][0].y for i in range(len(a) + 1)], color)
@@ -872,7 +776,7 @@ class ObsEnvironment(gym.Env):
                 width = obstacle[3]
                 length = obstacle[4]
                 self.obstacle_segments.append(
-                    self.getBB(obs, width=width, length=length, ego=False))
+                    self._getBB(obs, width=width, length=length, ego=False))
         assert len(self.obstacle_segments) > 0, "not static env"
 
         grid_resolution = self.grid_resolution
@@ -909,13 +813,13 @@ class ObsEnvironment(gym.Env):
         #get normalized dynamic boxes
         self.normalized_dynamic_boxes = []
         for vehicle in self.vehicles:
-            vertices = self.getBB(vehicle.getCurrentState())
+            vertices = self._getBB(vehicle.getCurrentState())
             self.normalized_dynamic_boxes.append(
                     [Point(max(0, pair_[0].x - self.normalized_x_init), 
                      max(0, pair_[0].y - self.normalized_y_init)) 
                      for pair_ in vertices])
 
-        vertices = self.getBB(self.vehicle.getCurrentState())
+        vertices = self._getBB(self.vehicle.getCurrentState())
         self.normalized_agent_box = [Point(max(0, pair_[0].x - self.normalized_x_init), 
                                      max(0, pair_[0].y - self.normalized_y_init)) 
                                      for pair_ in vertices]
@@ -1010,7 +914,8 @@ class ObsEnvironment(gym.Env):
                             self.grid_with_adding_features, 
                             pts = [contours], color=1)
         else:
-            adding_features = self.getDiff(self.current_state)
+            agent_state = self.vehicle.getCurrentState()
+            adding_features = self._getDiff(agent_state)
             self.grid_with_adding_features[0, 0:len(adding_features)] = adding_features
             if self.adding_dynamic_features:
                 assert len(self.vehicles) <= 2, "dynamic objects more than 2"
