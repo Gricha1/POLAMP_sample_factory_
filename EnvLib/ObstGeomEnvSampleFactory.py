@@ -38,23 +38,17 @@ class State:
 class Vehicle:
     def __init__(self, car_config, ego_car):
         self.ego_car = ego_car
-        self.length = car_config["length"]
-        self.width = car_config["width"]
-        if not ego_car:
-            safe_buffer = 0.6
-            self.length += safe_buffer
-            self.width += safe_buffer
         self.wheel_base = car_config["wheel_base"]
-        self.safe_eps = car_config["safe_eps"]
+        if self.ego_car:
+            self.length = car_config["length"]
+            self.width = car_config["width"]
+            self.safe_eps = car_config["safe_eps"]
         self.max_steer = degToRad(car_config["max_steer"])
         self.max_vel = car_config["max_vel"]
         self.min_vel = car_config["min_vel"]
         self.max_acc = car_config["max_acc"]
         self.max_ang_vel = car_config["max_ang_vel"]
         self.max_ang_acc = car_config["max_ang_acc"]
-        if not ego_car:
-            self.max_vel = 1
-            self.min_vel = -1
         self.delta_t = car_config["delta_t"]
         self.use_clip = car_config["use_clip"]
         if "movement_function" not in car_config:
@@ -90,12 +84,12 @@ class Vehicle:
         self.w = 0
         self.gear = None
         if not self.ego_car:
-            self.max_vel = 1
-            self.max_vel = -1
             self.movement_func = dynamic_config["movement_func"]
             self.movement_func_params = dynamic_config["movement_func_params"]
             self.max_vel = dynamic_config["boundary_v"]
             self.min_vel = -dynamic_config["boundary_v"]
+            self.width = dynamic_config["width"]
+            self.length = dynamic_config["length"]
         self.current_steps = 0
 
     def step(self, action=None):
@@ -403,19 +397,9 @@ class ObsEnvironment(gym.Env):
         self.dyn_acc = 0
         self.dyn_ang_vel = 0
         self.dyn_ang_acc = 0
-        #self.vehicle.v_s = 0
-        #self.vehicle.w = 0
-        #self.vehicle.Eps = 0
-        #self.vehicle.a = 0
-        #self.vehicle.j_a = 0
-        #self.vehicle.j_Eps = 0
-        #self.vehicle.prev_a = 0
-        #self.vehicle.prev_Eps = 0
         self.collision_time = 0
         if self.RS_reward:
             self.new_RS = None
-        #self.vehicle.gear = None
-        #self.vehicle.prev_gear = None
         if self.validate_env:
             set_task_without_dynamic_obsts = False
             if self.validateTestDataset:
@@ -435,11 +419,11 @@ class ObsEnvironment(gym.Env):
                      set_task_without_dynamic_obsts)
 
         for obstacle in self.obstacle_map:
-            obs = State(None, None, theta=obstacle[2], v=0, steer=0, 
-                        centred_x=obstacle[0], centred_y=obstacle[1], 
-                        width=2*obstacle[3], length=2*obstacle[4])
+            static_obst = State(None, None, theta=obstacle[2], v=0, steer=0, 
+                                centred_x=obstacle[0], centred_y=obstacle[1], 
+                                width=2*obstacle[3], length=2*obstacle[4])
             self.obstacle_segments.append(
-                self._getBB(obs))
+                self._getBB(static_obst))
                 
         self.start_dist = self._goalDist(self.current_state)
         self.last_images = []
@@ -540,11 +524,13 @@ class ObsEnvironment(gym.Env):
     def step(self, action):        
         info = {}
         isDone = False
+
         new_state, overSpeeding, overSteering = \
                 self.vehicle.step(action)
 
         for vehicle in self.vehicles:
             action = vehicle.get_action()
+            action = [0, 0]
             vehicle.step(action)
                         
         self.current_state = new_state
@@ -582,14 +568,16 @@ class ObsEnvironment(gym.Env):
         if not (self.stepCounter % self.UPDATE_SPARSE):
             self.old_state = self.current_state
         self.stepCounter += 1
+
         if goalReached or collision or (self.max_episode_steps == self.stepCounter):
 
-            #test
+            # test
             if self.stepCounter == 1:
                 print("DEBUG 1 step episode:")
                 print("agent pixels:", self.grid_agent.sum())
                 temp_grid_obst = self.grid_static_obst + self.grid_dynamic_obst
                 print("intersect pixels:", temp_grid_obst[self.grid_agent == 1].sum())
+
 
             isDone = True
             if goalReached:
@@ -607,7 +595,13 @@ class ObsEnvironment(gym.Env):
             info["terminal_heading"] = self.current_state.theta
             info["terminal_w"] = self.vehicle.w
             info["terminal_v_s"] = self.vehicle.v_s
-        
+
+            if self.validate_env:
+                info["terminal_grid_agent"] = self.grid_agent
+                info["terminal_grid_static_obst"] = self.grid_static_obst
+                info["terminal_grid_dynamic_obst"] = self.grid_dynamic_obst
+                info["terminal_render"] = self.render(0)
+            
         return observation, reward, isDone, info
 
     def drawObstacles(self, vertices, color="-b"):
@@ -755,6 +749,8 @@ class ObsEnvironment(gym.Env):
                     0, bottom_down_width, bottom_down_height]
                                 ]
             '''
+
+            '''
             parking_height = 2.7
             parking_width = 4.5
             bottom_left_boundary_height = 6
@@ -772,11 +768,41 @@ class ObsEnvironment(gym.Env):
                         bottom_left_boundary_center_y, road_width_,
                         bottom_left_right_dx_)
             for obstacle in self.obstacle_map:
-                obs = State(obstacle[0], obstacle[1], obstacle[2], 0, 0)
+                static_obst = State(obstacle[0], obstacle[1], obstacle[2], 0, 0)
                 width = obstacle[3]
                 length = obstacle[4]
                 self.obstacle_segments.append(
-                    self._getBB(obs, width=width, length=length, ego=False))
+                    self._getBB(static_obst, width=width, length=length, ego=False))
+            '''
+            parking_heights = np.linspace(2.7 + 0.2, 2.7 + 5, 20)
+            parking_widths = np.linspace(4.5, 7, 20)
+            road_widths = np.linspace(3, 6, 20)
+            bottom_left_boundary_heights = np.linspace(4.5, 6, 20)
+            upper_boundary_widths = np.linspace(0.5, 3, 20)
+            upper_boundary_heights = np.linspace(14, 16, 20)
+            bottom_left_boundary_center_x = 5 # any value
+            bottom_left_boundary_center_y = -5.5 # init value
+            bottom_left_boundary_height = bottom_left_boundary_heights[-1]
+            upper_boundary_width = upper_boundary_widths[0]
+            upper_boundary_height = upper_boundary_heights[-1]
+            parking_height = parking_heights[-1]
+            parking_width = parking_widths[-1]
+            road_width = road_widths[-1]
+            staticObstsInfo = {}
+            self.obstacle_map = getValetStaticObstsAndUpdateInfo(
+                parking_height, parking_width, bottom_left_boundary_height, 
+                upper_boundary_width, upper_boundary_height,
+                bottom_left_boundary_center_x, bottom_left_boundary_center_y, 
+                road_width,
+                staticObstsInfo
+            )
+            for obstacle in self.obstacle_map:
+                static_obst = State(None, None, theta=obstacle[2], v=0, steer=0, 
+                                    centred_x=obstacle[0], centred_y=obstacle[1], 
+                                    width=2*obstacle[3], length=2*obstacle[4])
+                self.obstacle_segments.append(
+                    self._getBB(static_obst))
+            
         assert len(self.obstacle_segments) > 0, "not static env"
 
         grid_resolution = self.grid_resolution
@@ -844,7 +870,6 @@ class ObsEnvironment(gym.Env):
                              int(y_ceil * grid_resolution))
                 one_x_one_x_ind = 0
                 one_x_one_y_ind = 0
-                
                 rx, lx, ry, ly = 1.0, 0.0, 1.0, 0.0
                 curr_ind_add = grid_resolution
                 while rx - lx > 1 / grid_resolution:
@@ -861,24 +886,20 @@ class ObsEnvironment(gym.Env):
                     else:
                         ly = my
                         one_x_one_y_ind += curr_ind_add
-
                 if x_f == 0:
                     if prev_x <= curr_x and next_x <= curr_x:
                         x_ceil -= 1
                         one_x_one = (int(x_ceil * grid_resolution), 
                                      int(y_ceil * grid_resolution))
                         one_x_one_x_ind = grid_resolution - 1
-
                 if y_f == 0:
                     if prev_y <= curr_y and next_y <= curr_y:
                         y_ceil -= 1
                         one_x_one = (int(x_ceil * grid_resolution), 
                                      int(y_ceil * grid_resolution))
                         one_x_one_y_ind = grid_resolution - 1
-
                 index_grid_rev_x = one_x_one[0] + one_x_one_x_ind
                 index_grid_rev_y = one_x_one[1] + one_x_one_y_ind
-                
                 cv_index_x = index_grid_rev_x
                 cv_index_y = y_shape - index_grid_rev_y 
                 box_cv_indexes.append(Point(cv_index_x, cv_index_y))
@@ -895,13 +916,13 @@ class ObsEnvironment(gym.Env):
             color = 1
             if ind_box >= len(self.normalized_static_boxes):
                 self.grid_dynamic_obst = cv.fillPoly(self.grid_dynamic_obst, 
-                                                pts = [contours], color=color)    
+                                                     pts = [contours], color=color)    
             self.grid_static_obst = cv.fillPoly(self.grid_static_obst, 
                                                 pts = [contours], color=color)
 
         cv_box = self.cv_index_agent_box
         contours = np.array([[cv_box[3].x, cv_box[3].y], [cv_box[2].x, cv_box[2].y], 
-                                [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
+                            [cv_box[1].x, cv_box[1].y], [cv_box[0].x, cv_box[0].y]])
         self.grid_agent = cv.fillPoly(self.grid_agent, pts = [contours], color=1)
 
         if not self.adding_ego_features:

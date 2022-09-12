@@ -26,7 +26,6 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
     done_save_img = False
     debug_not_done_save_img = False
     debug_forward_move = None
-    debug_dynamic = False
     debug_dataset = False
     debug_speed = False
     debug_testdataset = False
@@ -165,16 +164,24 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
 
                             obs, rew, done, infos = env.step(actions)
 
-                            if debug_dynamic:
-                                print("Debug values:", np.unique(obs[0][0]))
-                            if save_image:
+                            if save_image and not done[0]:
                                 cumul_reward += rew[0]
                                 image = env.render(reward=cumul_reward)
                                 images.append(image)
-                            if save_obs:
+                            if save_image and done[0]:
+                                image = infos[0]["terminal_render"]
+                                images.append(image)
+                            if save_obs and not done[0]:
                                 obs_img = np.expand_dims(env.grid_static_obst * 255, axis=2)
                                 ag_img = np.expand_dims(env.grid_agent * 255, axis=2)
                                 dyn_img = np.expand_dims(env.grid_dynamic_obst * 255, axis=2)
+                                image = np.concatenate((obs_img, ag_img, dyn_img), 
+                                                        axis=2)
+                                images_observ.append(image)
+                            if save_obs and done[0]:
+                                obs_img = np.expand_dims(infos[0]["terminal_grid_static_obst"] * 255, axis=2)
+                                ag_img = np.expand_dims(infos[0]["terminal_grid_agent"] * 255, axis=2)
+                                dyn_img = np.expand_dims(infos[0]["terminal_grid_dynamic_obst"] * 255, axis=2)
                                 image = np.concatenate((obs_img, ag_img, dyn_img), 
                                                         axis=2)
                                 images_observ.append(image)
@@ -200,7 +207,7 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                             episode_done = False
                             if all(finished_episode):
                                 print(f"finished_episode: {finished_episode}")
-                                print(f"infos: {infos}")
+                                #print(f"infos: {infos}")
                                 if "Collision" in infos[0]:
                                     print("$$ Collision $$")
                                     collision_tasks += 1
@@ -224,10 +231,18 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                                         if avg_true_reward_str:
                                             avg_true_reward_str += ', '
                                         avg_true_reward_str += f'#{agent_i}: {avg_true_rew:.3f}'
+                                        
+                        # test
+                        #interested_episode = False
+                        #if num_frames == 1 and "Collision" in infos[0]:
+                        #    interested_episode = True
+                        #else:
+                        #    break
 
-                            # test
-                            #if num_frames == 1 and "Collision" not in infos[0]:
-                            #    break
+                # test                
+                #if not interested_episode:
+                #    continue
+
 
                 done = False
                 if not ("Collision" in infos[0]) and not ("SoftEps" in infos[0]) \
@@ -242,9 +257,9 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                     wandb.log({f"Val_trajectory_": wandb.Video(images, 
                                                 fps=10, format="gif")})
                 if save_obs and use_wandb and ((done_save_img and done) or \
-                                                                not done_save_img):
+                                                            not done_save_img):
                     images_observ = np.transpose(np.array(images_observ), 
-                                                                axes=[0, 3, 1, 2])
+                                                 axes=[0, 3, 1, 2])
                     print("DEBUG obs:", images_observ.shape)
                     wandb.log({f"Obs_trajectory_": wandb.Video(images_observ, 
                                                     fps=10, format="gif")})
