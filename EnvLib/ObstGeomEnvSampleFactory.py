@@ -185,8 +185,6 @@ class Vehicle:
     
 class ObsEnvironment(gym.Env):
     def __init__(self, full_env_name, config):
-        self.gear_switch_penalty = True
-        self.RS_reward = True
         self.adding_ego_features = True
         self.adding_dynamic_features = True
         self.gridCount = 4
@@ -198,12 +196,6 @@ class ObsEnvironment(gym.Env):
 
         self.name = full_env_name
         env_config = config["our_env_config"]
-        self.validate_env = env_config["validate_env"]
-        self.validateTestDataset = env_config["validateTestDataset"]
-        if self.validate_env:
-            print("DEBUG: VALIDATE ENV")
-            if self.validateTestDataset:
-                print("DEBUG: VALIDATE TEST DATASET")
         self.reward_config = config["reward_config"]
         self.old_state = None
         self.obstacle_segments = []
@@ -214,56 +206,38 @@ class ObsEnvironment(gym.Env):
         self.Tasks = config['Tasks']
         self.maps_init = config['maps']
         self.maps = dict(config['maps'])
-        self.max_steer = env_config['max_steer']
-        self.max_dist = env_config['max_dist']
-        self.min_dist = env_config['min_dist']
-        self.min_vel = env_config['min_vel']
-        self.max_vel = env_config['max_vel']
-        self.min_obs_v = env_config['min_obs_v']
-        self.max_obs_v = env_config['max_obs_v']
         self.HARD_EPS = env_config['HARD_EPS']
-        self.MEDIUM_EPS = env_config['MEDIUM_EPS']
-        self.SOFT_EPS = env_config['SOFT_EPS']
         self.ANGLE_EPS = degToRad(env_config['ANGLE_EPS'])
         self.SPEED_EPS = env_config['SPEED_EPS']
         self.STEERING_EPS = degToRad(env_config['STEERING_EPS'])
         self.MAX_DIST_LIDAR = env_config['MAX_DIST_LIDAR']
         self.UPDATE_SPARSE = env_config['UPDATE_SPARSE']
-        self.view_angle = degToRad(env_config['view_angle'])
-        self.hard_constraints = env_config['hard_constraints']
-        self.medium_constraints = env_config['medium_constraints']
-        self.soft_constraints = env_config['soft_constraints']
-        self.with_potential = env_config['reward_with_potential']
         self.frame_stack = env_config['frame_stack']
-        self.use_acceleration_penalties = env_config['use_acceleration_penalties']
-        self.use_velocity_goal_penalty = env_config['use_velocity_goal_penalty']
-        self.use_different_acc_penalty = env_config['use_different_acc_penalty']
-        self.max_episode_steps = env_config['max_polamp_steps']
+        self.max_episode_steps = env_config['max_steps']
         self.dyn_acc = 0
         self.dyn_ang_vel = 0
         self.collision_time = 0
+        self.gear_switch_reward = env_config['gear_switch_reward']
+        self.RS_reward = env_config['redshape_reward']
         self.reward_weights = [
             self.reward_config["collision"],
             self.reward_config["goal"],
             self.reward_config["timeStep"],
-            self.reward_config["distance"],
+            self.reward_config["redshapeDistance"],
             self.reward_config["overSpeeding"],
             self.reward_config["overSteering"],
             self.reward_config["gearSwitchPenalty"]
         ]
-        if self.use_acceleration_penalties:
-            self.reward_weights.append(self.reward_config["Eps_penalty"])
-            self.reward_weights.append(self.reward_config["a_penalty"])
-        if self.use_velocity_goal_penalty:
-            self.reward_weights.append(self.reward_config["v_goal_penalty"])
-        if self.use_different_acc_penalty:
-            self.reward_weights.append(self.reward_config["differ_a"])
-            self.reward_weights.append(self.reward_config["differ_Eps"])
-        assert self.hard_constraints \
-            + self.medium_constraints \
-            + self.soft_constraints == 1, \
-            "only one constraint is acceptable"
 
+        self.validate_env = env_config["validate_env"]
+        self.validate_test_dataset = env_config["validate_test_dataset"]
+        if self.validate_env:
+            print("DEBUG: VALIDATE ENV")
+            if self.validate_test_dataset:
+                print("DEBUG: VALIDATE TEST DATASET")
+        self.validate_with_reward = env_config["validate_with_reward"]
+        self.validate_with_render = env_config["validate_with_render"]
+        
         state_min_box = [[[-np.inf for j in range(self.grid_shape[1])] 
                 for i in range(self.grid_shape[0])] for _ in range(self.gridCount)]
         state_max_box = [[[np.inf for j in range(self.grid_shape[1])] 
@@ -402,14 +376,14 @@ class ObsEnvironment(gym.Env):
             self.new_RS = None
         if self.validate_env:
             set_task_without_dynamic_obsts = False
-            if self.validateTestDataset:
-                self.stop_dynamic_step = 1200
-                if val_key == "map0" or val_key == "map2":
-                    self.stop_dynamic_step = 100
-                elif val_key == "map1" or val_key == "map3":
-                    self.stop_dynamic_step = 110
-                elif val_key == "map6":
-                    self.stop_dynamic_step = 200
+        #    if self.validate_test_dataset:
+        #        self.stop_dynamic_step = 1200
+        #        if val_key == "map0" or val_key == "map2":
+        #            self.stop_dynamic_step = 100
+        #        elif val_key == "map1" or val_key == "map3":
+        #            self.stop_dynamic_step = 110
+        #        elif val_key == "map6":
+        #            self.stop_dynamic_step = 200
 
         index = np.random.randint(len(self.lst_keys))
         self.map_key = self.lst_keys[index]
@@ -473,41 +447,15 @@ class ObsEnvironment(gym.Env):
             else:
                 if (new_delta < 0.5):
                     new_delta = 0.5
-                if self.with_potential:
-                    #reward.append((previous_delta - new_delta) / new_delta)
-                    reward.append(previous_delta - new_delta)
-                else:
-                    reward.append(previous_delta - new_delta)
+                reward.append(previous_delta - new_delta)
             reward.append(-1 if overSpeeding else 0)
             reward.append(-1 if overSteering else 0)
-            if self.use_acceleration_penalties:
-                reward.append(-abs(self.vehicle.Eps))
-                reward.append(-abs(self.vehicle.a))
-            if self.use_velocity_goal_penalty:
-                if goalReached:
-                    reward.append(-abs(new_state.v))
-                else:
-                    reward.append(0)
-            if self.use_different_acc_penalty:
-                reward.append(-abs(self.vehicle.a - self.vehicle.prev_a))
-                reward.append(-abs(self.vehicle.Eps - self.vehicle.prev_Eps))
         else:
             reward.append(0)
             reward.append(0)
             reward.append(0)
             reward.append(0)
-            if self.use_acceleration_penalties:
-                reward.append(0)
-                reward.append(0)
-            if self.use_velocity_goal_penalty:
-                if goalReached:
-                    reward.append(0)
-                else:
-                    reward.append(0)
-            if self.use_different_acc_penalty:
-                reward.append(0)
-                reward.append(0)
-        if self.gear_switch_penalty:
+        if self.gear_switch_reward:
             if not(self.vehicle.prev_gear is None) and \
                self.vehicle.prev_gear != self.vehicle.gear:
                 reward.append(-1)
@@ -548,37 +496,23 @@ class ObsEnvironment(gym.Env):
         
         distanceToGoal = self._goalDist(new_state)
         info["EuclideanDistance"] = distanceToGoal
-        if self.hard_constraints:
-            goalReached = distanceToGoal < self.HARD_EPS and abs(
-                normalizeAngle(new_state.theta - self.goal.theta)) < self.ANGLE_EPS \
-                and abs(new_state.v - self.goal.v) <= self.SPEED_EPS
-        elif self.medium_constraints:
-            goalReached = distanceToGoal < self.MEDIUM_EPS and abs(
-                normalizeAngle(new_state.theta - self.goal.theta)) < self.ANGLE_EPS
-        elif self.soft_constraints:
-            goalReached = distanceToGoal < self.SOFT_EPS
-
-        if not self.validate_env:
+        goalReached = distanceToGoal < self.HARD_EPS and abs(
+            normalizeAngle(new_state.theta - self.goal.theta)) < self.ANGLE_EPS \
+            and abs(new_state.v - self.goal.v) <= self.SPEED_EPS
+    
+        if self.validate_env and not self.validate_with_reward:
+            reward = 0
+        else:
             reward = self._reward(self.old_state, new_state, 
                                 goalReached, collision, overSpeeding, 
                                 overSteering)
-        else:
-            reward = 0
         
         if not (self.stepCounter % self.UPDATE_SPARSE):
             self.old_state = self.current_state
         self.stepCounter += 1
 
         if goalReached or collision or (self.max_episode_steps == self.stepCounter):
-
-            # test
-            if self.stepCounter == 1:
-                print("DEBUG 1 step episode:")
-                print("agent pixels:", self.grid_agent.sum())
-                temp_grid_obst = self.grid_static_obst + self.grid_dynamic_obst
-                print("intersect pixels:", temp_grid_obst[self.grid_agent == 1].sum())
-
-
+            
             isDone = True
             if goalReached:
                 info["OK"] = True
@@ -596,7 +530,7 @@ class ObsEnvironment(gym.Env):
             info["terminal_w"] = self.vehicle.w
             info["terminal_v_s"] = self.vehicle.v_s
 
-            if self.validate_env:
+            if self.validate_env and self.validate_with_render:
                 info["terminal_grid_agent"] = self.grid_agent
                 info["terminal_grid_static_obst"] = self.grid_static_obst
                 info["terminal_grid_dynamic_obst"] = self.grid_dynamic_obst
@@ -707,73 +641,6 @@ class ObsEnvironment(gym.Env):
         fake_static_obstacles = False
         if len(self.obstacle_segments) == 0:
             fake_static_obstacles = True
-            '''
-            parking_height = 2.7
-            parking_width = 4.5
-            bottom_left_boundary_width = parking_width / 2
-            bottom_right_boundary_width = parking_width / 2
-            bottom_left_boundary_height = 6 # any value
-            bottom_right_boundary_height = bottom_left_boundary_height
-            bottom_left_boundary_center_x = 5 # any value
-            bottom_right_boundary_center_x = bottom_left_boundary_center_x \
-                        + bottom_left_boundary_height + parking_height \
-                        + bottom_right_boundary_height
-            bottom_left_boundary_center_y = -5.5 # init value
-            bottom_right_boundary_center_y = bottom_left_boundary_center_y
-            bottom_road_edge_y = bottom_left_boundary_center_y + bottom_left_boundary_width
-            upper_boundary_width = 0.5 # any value
-            upper_boundary_height = 17 
-            bottom_down_width = upper_boundary_width 
-            bottom_down_height = parking_height / 2 
-            upper_boundary_center_x = bottom_left_boundary_center_x \
-                            + bottom_left_boundary_height + parking_height / 2
-            bottom_down_center_x = upper_boundary_center_x
-            bottom_down_center_y = bottom_left_boundary_center_y \
-                        - bottom_left_boundary_width - bottom_down_width \
-                        - 0.2 # dheight
-            road_width_ = 6
-            bottom_left_right_dx_ = 0.25
-            road_center_y = bottom_road_edge_y + road_width_
-            upper_boundary_center_y = road_center_y + road_width_ + upper_boundary_width
-            
-            self.obstacle_map = [
-                [upper_boundary_center_x, upper_boundary_center_y, 
-                        0, upper_boundary_width, upper_boundary_height], 
-                    [bottom_left_boundary_center_x + bottom_left_right_dx_, 
-                    bottom_left_boundary_center_y, 0, bottom_left_boundary_width,
-                    bottom_left_boundary_height],
-                    [bottom_right_boundary_center_x - bottom_left_right_dx_, 
-                    bottom_right_boundary_center_y, 0, bottom_right_boundary_width, 
-                    bottom_right_boundary_height], 
-                    [bottom_down_center_x, bottom_down_center_y, 
-                    0, bottom_down_width, bottom_down_height]
-                                ]
-            '''
-
-            '''
-            parking_height = 2.7
-            parking_width = 4.5
-            bottom_left_boundary_height = 6
-            upper_boundary_height = 17
-            upper_boundary_width = 0.5
-            bottom_left_boundary_center_x = 5
-            bottom_left_boundary_center_y = -5.5
-            road_width_ = 6
-            bottom_left_right_dx_ = 0.25
-            self.obstacle_map = getValetStaticObstsAndUpdateInfo(
-                        parking_height, parking_width, 
-                        bottom_left_boundary_height, 
-                        upper_boundary_width, upper_boundary_height,
-                        bottom_left_boundary_center_x, 
-                        bottom_left_boundary_center_y, road_width_,
-                        bottom_left_right_dx_)
-            for obstacle in self.obstacle_map:
-                static_obst = State(obstacle[0], obstacle[1], obstacle[2], 0, 0)
-                width = obstacle[3]
-                length = obstacle[4]
-                self.obstacle_segments.append(
-                    self._getBB(static_obst, width=width, length=length, ego=False))
-            '''
             parking_heights = np.linspace(2.7 + 0.2, 2.7 + 5, 20)
             parking_widths = np.linspace(4.5, 7, 20)
             road_widths = np.linspace(3, 6, 20)

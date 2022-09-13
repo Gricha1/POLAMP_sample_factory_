@@ -665,12 +665,6 @@ def generateCar(x_min, x_max,
     
     return [x, y, theta, v, steer]
 
-def isAppropiateTask():
-    pass
-
-def changeToApprotiateTask():
-    pass
-
 def getValetStaticObstsAndUpdateInfo(
         parking_height, parking_width, 
         bottom_left_boundary_height, upper_boundary_width, upper_boundary_height,

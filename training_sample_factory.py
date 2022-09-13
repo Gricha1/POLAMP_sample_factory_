@@ -42,6 +42,10 @@ with open("configs/reward_weight_configs.json", 'r') as f:
 with open("configs/car_configs.json", 'r') as f:
     car_config = json.load(f)
 
+with open("configs/dataset_configs.json", 'r') as f:
+    dataset_config = json.load(f)
+
+
 
 def custom_parse_args(argv=None, evaluation=False):
 
@@ -87,34 +91,30 @@ def custom_parse_args(argv=None, evaluation=False):
     return cfg
 
 def make_custom_env_func(full_env_name, cfg=None, env_config=None):
-    if our_env_config["validate_env"] and our_env_config["validateTestDataset"]:
+    if our_env_config["validate_env"] and our_env_config["validate_test_dataset"]:
         generated_tasks = getTestTasks(car_config)
+    elif our_env_config["validate_env"]:
+        tasks_config = {}
+        tasks_config["union"] = dataset_config["union"]
+        tasks_config["static"] = dataset_config["static"]
+        tasks_config["dynamic"] = dataset_config["dynamic"]
+        generated_tasks = getTrainValidateTasks(tasks_config, car_config, train=False)
     else:
         tasks_config = {}
-        tasks_config["union"] = our_env_config["union"]
-        tasks_config["static"] = our_env_config["static"]
-        tasks_config["dynamic"] = our_env_config["dynamic"]
+        tasks_config["union"] = dataset_config["union"]
+        tasks_config["static"] = dataset_config["static"]
+        tasks_config["dynamic"] = dataset_config["dynamic"]
         generated_tasks = getTrainValidateTasks(tasks_config, car_config, train=True)
     maps, generated_tasks = ChangeTaskFormat(generated_tasks)
   
-    if our_env_config["union"]:
-        environment_config = {
-            'car_config': car_config,
-            'Tasks': generated_tasks,
-            'maps': maps,
-            'our_env_config' : our_env_config,
-            'reward_config' : reward_config,
-            'evaluation': cfg.evaluation,
-        }
-    else:
-        environment_config = {
-            'car_config': car_config,
-            'Tasks': generated_tasks,
-            'maps': maps,
-            'our_env_config' : our_env_config,
-            'reward_config' : reward_config,
-            'evaluation': cfg.evaluation
-        }
+    environment_config = {
+        'car_config': car_config,
+        'Tasks': generated_tasks,
+        'maps': maps,
+        'our_env_config' : our_env_config,
+        'reward_config' : reward_config,
+        'evaluation': cfg.evaluation,
+    }
 
     cfg.other_keys = environment_config
 

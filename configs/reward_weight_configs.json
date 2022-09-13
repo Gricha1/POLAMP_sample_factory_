@@ -2,7 +2,7 @@
     "collision": 16,
     "goal": 20,
     "timeStep": 0.05,
-    "distance": 1,
+    "redshapeDistance": 1,
     "reverse": 0.3,
     "overSpeeding": 0.5,
     "overSteering": 0.5,

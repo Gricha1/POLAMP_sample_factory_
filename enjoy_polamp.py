@@ -207,7 +207,6 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                             episode_done = False
                             if all(finished_episode):
                                 print(f"finished_episode: {finished_episode}")
-                                #print(f"infos: {infos}")
                                 if "Collision" in infos[0]:
                                     print("$$ Collision $$")
                                     collision_tasks += 1
