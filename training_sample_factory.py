@@ -40,10 +40,7 @@ with open("configs/dataset_configs.json", 'r') as f:
     dataset_config = json.load(f)
 
 def custom_parse_args(argv=None, evaluation=False):
-
     parser = arg_parser(argv, evaluation=evaluation)
-
-    # add custom args here
     parser.add_argument('--my_custom_arg', type=int, 
                     default=42, help='Any custom arguments users might define')
     cfg = parse_args(argv=argv, evaluation=evaluation, parser=parser)

@@ -13,10 +13,6 @@ def getTrainValidateTasks(tasks_config, car_config, train):
     """
     tasks = [] 
     for case_num in range(1, 12 + 1):
-
-        # test
-        if case_num != 1 and case_num != 2 and case_num != 3 and case_num != 4 and case_num != 5 and case_num != 6:
-            continue
         
         for i in range(1000):
             train_case_task = getCaseTask(case_num,
@@ -207,19 +203,45 @@ def trySatisfyCollisionConditions(staticObstsInfo,
     safe_distance_between_centers = agent_radius + self_d_radius \
                                     + dyn_radius + self_d_radius                           
     
-    if (case_num == 1 or case_num == 2 or \
-            case_num == 3 or case_num == 4 or case_num == 5 or \
-            case_num == 6):
-        dynamic_new_dxs = np.linspace(10, 20, 20)
-        dynamic_new_dx = np.random.choice(dynamic_new_dxs)
-        distance_between_centers = np.sqrt((agent_x_center - dyn_x_center) ** 2 \
-                                           + (agent_y_center - dyn_y_center) ** 2)
-        if distance_between_centers <= safe_distance_between_centers:
-            if dyn_x < agent_x and (case_num == 5 or case_num == 6):
-                dyn_x = agent_x - safe_distance_between_centers
+    distance_between_centers = np.sqrt((agent_x_center - dyn_x_center) ** 2 \
+                                        + (agent_y_center - dyn_y_center) ** 2)
+    if distance_between_centers <= safe_distance_between_centers:
+        if dyn_x < agent_x and (case_num == 5 or case_num == 6):
+            dyn_x = agent_x - safe_distance_between_centers
+        elif case_num == 1 or case_num == 2 or \
+                case_num == 3 or case_num == 4 or case_num == 5 or \
+                case_num == 6:
+            dynamic_new_dxs = np.linspace(10, 20, 20)
+            dynamic_new_dx = np.random.choice(dynamic_new_dxs)
+            dyn_x = agent_x + safe_distance_between_centers \
+                    + dynamic_new_dx
+        elif (dyn_x <= agent_x and (case_num == 7 or case_num == 8)) or \
+                (case_num == 9 or case_num == 10):
+            dynamic_new_dxs = np.linspace(5, 10, 20)
+            dynamic_new_dx = np.random.choice(dynamic_new_dxs)
+            dyn_x = agent_x - safe_distance_between_centers - dynamic_new_dx
+        elif case_num == 7 or case_num == 8:
+            dyn_x = agent_x + safe_distance_between_centers
+        if dyn_y <= agent_y and (case_num == 11 or case_num == 12):
+            dynamic_new_dxs = np.linspace(10, 15, 20)
+            dynamic_new_dys = np.linspace(10, 15, 20)
+            dynamic_new_dx = np.random.choice(dynamic_new_dxs)
+            dynamic_new_dy = np.random.choice(dynamic_new_dys)
+            if dyn_theta >= degToRad(90):
+                dyn_x = agent_x + safe_distance_between_centers + dynamic_new_dx
             else:
-                dyn_x = agent_x + safe_distance_between_centers \
-                        + dynamic_new_dx
+                dyn_x = agent_x - safe_distance_between_centers - dynamic_new_dx
+            dyn_y = agent_y - safe_distance_between_centers - dynamic_new_dy
+        elif dyn_y > agent_y and (case_num == 11 or case_num == 12):
+            dynamic_new_dxs = np.linspace(10, 15, 20)
+            dynamic_new_dys = np.linspace(10, 15, 20)
+            dynamic_new_dx = np.random.choice(dynamic_new_dxs)
+            dynamic_new_dy = np.random.choice(dynamic_new_dys)
+            if dyn_theta <= degToRad(270):
+                dyn_x = agent_x + safe_distance_between_centers + dynamic_new_dx
+            else:
+                dyn_x = agent_x - safe_distance_between_centers - dynamic_new_dx
+            dyn_y = agent_y + safe_distance_between_centers + dynamic_new_dy
 
     agent = [agent_x, agent_y, agent_theta, agent_v, agent_steer]
     goal = [goal_x, goal_y, goal_theta, goal_v, goal_steer]

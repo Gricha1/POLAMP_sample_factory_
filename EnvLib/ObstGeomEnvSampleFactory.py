@@ -126,7 +126,8 @@ class Vehicle:
         overSteering = abs(new_steer) > self.max_steer
         new_steer = np.clip(new_steer, -self.max_steer, self.max_steer)
 
-        w = (new_v * np.tan(steer) / self.wheel_base)
+        w = (new_v * np.tan(new_steer) / self.wheel_base)
+
         dtheta = w * dt
         new_theta = theta + dtheta
         new_theta = normalizeAngle(new_theta)
@@ -158,10 +159,12 @@ class Vehicle:
         self.theta = new_theta
         self.v = new_v
         self.steer = new_steer
-        self.v_s = v_s
+        self.v_s = new_v_s
         self.w = w
         self.gear = new_gear
-        new_state = State(new_x, new_y, new_theta, new_v, steer)
+
+        new_state = State(new_x, new_y, new_theta, new_v, new_steer)
+
         self.current_steps += 1
 
         return new_state, overSpeeding, overSteering
@@ -171,10 +174,11 @@ class Vehicle:
 
         return State(self.shifted_x, self.shifted_y, 
                      self.theta, self.v, self.steer,
-                     self.v_s, self.w, self.gear,
-                     self.last_a, self.last_Eps,
-                     centred_x, centred_y, 
-                     self.width, self.length, self.wheel_base)
+                     v_s=self.v_s, w=self.w, gear=self.gear,
+                     last_a=self.last_a, last_Eps=self.last_Eps,
+                     centred_x=centred_x, centred_y=centred_y, 
+                     width=self.width, length=self.length, 
+                     wheel_base=self.wheel_base)
 
     def getCentredCoordinates(self):
         shift = self.wheel_base / 2
@@ -376,6 +380,7 @@ class ObsEnvironment(gym.Env):
             self.new_RS = None
         if self.validate_env:
             set_task_without_dynamic_obsts = False
+            # test
         #    if self.validate_test_dataset:
         #        self.stop_dynamic_step = 1200
         #        if val_key == "map0" or val_key == "map2":
@@ -512,7 +517,6 @@ class ObsEnvironment(gym.Env):
         self.stepCounter += 1
 
         if goalReached or collision or (self.max_episode_steps == self.stepCounter):
-            
             isDone = True
             if goalReached:
                 info["OK"] = True

@@ -37,7 +37,8 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
         debug_forward_move = None
         debug_dataset = False
         debug_testdataset = False
-        render_action_repeat = cfg.render_action_repeat if cfg.render_action_repeat is not None else cfg.env_frameskip
+        render_action_repeat = cfg.render_action_repeat if \
+            cfg.render_action_repeat is not None else cfg.env_frameskip
         if render_action_repeat is None:
             log.warning('Not using action repeat!')
             render_action_repeat = 1
@@ -76,18 +77,11 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
         print("validation environment:")
         print("dataset size:", env.Tasks.keys())
         for val_key in env.Tasks:
-            if debug_dataset or debug_testdataset:
-                total_tasks = 100
+            total_tasks += 1
             count_map += 1
             eval_tasks = len(env.Tasks[val_key])
             print("Num map:", count_map, "out of", len(env.Tasks), 
                     "count task:", eval_tasks)
-            if debug_testdataset:
-                if count_map < 1:
-                    continue
-            if debug_dataset:
-                if count_map < 7:
-                    continue
             id = 0
             if debug_not_done_save_img:
                 render_environment = False
@@ -221,15 +215,15 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                                         f'#{agent_i}: {avg_true_rew:.3f}'
                                     
                     # test
-                    interested_episode = False
-                    if num_frames == 1 and "Collision" in infos[0]:
-                        interested_episode = True
-                    else:
-                        break
+                    #interested_episode = False
+                    #if num_frames == 1 and "Collision" in infos[0]:
+                    #    interested_episode = True
+                    #else:
+                    #    break
 
             # test                
-            if not interested_episode:
-                continue
+            #if not interested_episode:
+            #    continue
 
             done = False
             if not ("Collision" in infos[0]) and not ("SoftEps" in infos[0]) \
