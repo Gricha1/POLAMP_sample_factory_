@@ -22,16 +22,10 @@ from sample_factory.algorithms.appo.model_utils import register_custom_encoder, 
 from sample_factory.algorithms.utils.algo_utils import EXTRA_PER_POLICY_SUMMARIES
 from sample_factory.envs.env_registry import global_env_registry
 from sample_factory.run_algorithm import run_algorithm
-
-from policy_gradient.utlis import generateDataSet
-from policy_gradient.utlis import getTestTasks
 from EnvLib.ObstGeomEnvSampleFactory import *
 from utils_SF.residual_net import ResnetEncoder
 
 use_wandb = True
-
-with open("configs/train_configs.json", 'r') as f:
-    train_config = json.load(f)
 
 with open("configs/environment_configs.json", 'r') as f:
     our_env_config = json.load(f)
@@ -45,8 +39,6 @@ with open("configs/car_configs.json", 'r') as f:
 with open("configs/dataset_configs.json", 'r') as f:
     dataset_config = json.load(f)
 
-
-
 def custom_parse_args(argv=None, evaluation=False):
 
     parser = arg_parser(argv, evaluation=evaluation)
@@ -59,8 +51,6 @@ def custom_parse_args(argv=None, evaluation=False):
     
     cfg.rollout = 512
     cfg.recurrence = 128
-    #cfg.rollout = 32
-    #cfg.recurrence = 32
     
     cfg.encoder_type = 'conv'
     cfg.encoder_subtype = 'convnet_simple'

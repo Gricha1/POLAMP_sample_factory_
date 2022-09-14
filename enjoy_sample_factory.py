@@ -4,10 +4,6 @@ sys.path.insert(0, "sample-factory/")
 sys.path.insert(0, "../")
 from enjoy_polamp import enjoy
 from training_sample_factory import register_custom_components, custom_parse_args
-from policy_gradient.utlis import generateDataSet
-
-with open("configs/train_configs.json", 'r') as f:
-    train_config = json.load(f)
 
 with open("configs/environment_configs.json", 'r') as f:
     our_env_config = json.load(f)

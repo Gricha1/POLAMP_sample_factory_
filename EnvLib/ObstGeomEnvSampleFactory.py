@@ -213,7 +213,7 @@ class ObsEnvironment(gym.Env):
         self.MAX_DIST_LIDAR = env_config['MAX_DIST_LIDAR']
         self.UPDATE_SPARSE = env_config['UPDATE_SPARSE']
         self.frame_stack = env_config['frame_stack']
-        self.max_episode_steps = env_config['max_steps']
+        self.max_episode_steps = env_config['max_episode_steps']
         self.dyn_acc = 0
         self.dyn_ang_vel = 0
         self.collision_time = 0
