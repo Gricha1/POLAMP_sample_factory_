@@ -1,5 +1,5 @@
 {
     "union": 0,
-    "dynamic": 0,
+    "dynamic": 1,
     "static": 0
 }

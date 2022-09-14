@@ -105,7 +105,6 @@ def getCaseTask(case_num, tasks_config, car_config, train=True):
             staticObstsInfo
         )
     else:
-        # test
         bottom_left_boundary_height = bottom_left_boundary_heights[-1]
         upper_boundary_width = upper_boundary_widths[0]
         upper_boundary_height = upper_boundary_heights[-1]
@@ -183,13 +182,14 @@ def trySatisfyCollisionConditions(staticObstsInfo,
     agent_width = car_config["width"]
     agent_length = car_config["length"]
 
-    self_d_radius = 2
+    # check collision when agent any dynamic obst appears
+    self_d_radius = 1
     # get agent safe circle
     agent_x_center = agent_x + (wheel_base / 2) * np.cos(agent_theta)
     agent_y_center = agent_y + (wheel_base / 2) * np.sin(agent_theta)
-    agent_conor_x = agent_x - (agent_length / 2 - wheel_base / 2) * np.cos(agent_theta) \
+    agent_conor_x = agent_x_center - (agent_length / 2) * np.cos(agent_theta) \
         + (agent_width / 2) * np.cos(agent_theta + degToRad(90))
-    agent_conor_y = agent_y - (agent_length / 2 - wheel_base / 2) * np.sin(agent_theta) \
+    agent_conor_y = agent_y_center - (agent_length / 2) * np.sin(agent_theta) \
         + (agent_width / 2) * np.sin(agent_theta + degToRad(90))
     agent_radius = np.sqrt(abs(agent_x_center - agent_conor_x) ** 2 \
                            + abs(agent_y_center - agent_conor_y) ** 2)
@@ -197,22 +197,29 @@ def trySatisfyCollisionConditions(staticObstsInfo,
     # get dynamic safe circle
     dyn_x_center = dyn_x + (dyn_wheel_base / 2) * np.cos(dyn_theta)
     dyn_y_center = dyn_y + (dyn_wheel_base / 2) * np.sin(dyn_theta)
-    dyn_conor_x = dyn_x - (dyn_length / 2 - dyn_wheel_base / 2) * np.cos(dyn_theta) \
+    dyn_conor_x = dyn_x_center - (dyn_length / 2) * np.cos(dyn_theta) \
         + (dyn_width / 2) * np.cos(dyn_theta + degToRad(90))
-    dyn_conor_y = dyn_y - (dyn_length / 2 - dyn_wheel_base / 2) * np.sin(dyn_theta) \
+    dyn_conor_y = dyn_y_center - (dyn_length / 2) * np.sin(dyn_theta) \
         + (dyn_width / 2) * np.sin(dyn_theta + degToRad(90))
     dyn_radius = np.sqrt(abs(dyn_x_center - dyn_conor_x) ** 2 \
                            + abs(dyn_y_center - dyn_conor_y) ** 2)
-
+    
+    safe_distance_between_centers = agent_radius + self_d_radius \
+                                    + dyn_radius + self_d_radius                           
+    
     if (case_num == 1 or case_num == 2 or \
             case_num == 3 or case_num == 4 or case_num == 5 or \
             case_num == 6):
-        
-        # test
+        dynamic_new_dxs = np.linspace(10, 20, 20)
+        dynamic_new_dx = np.random.choice(dynamic_new_dxs)
         distance_between_centers = np.sqrt((agent_x_center - dyn_x_center) ** 2 \
                                            + (agent_y_center - dyn_y_center) ** 2)
-        if distance_between_centers <= agent_radius + self_d_radius + dyn_radius + self_d_radius:
-            dyn_x += 10
+        if distance_between_centers <= safe_distance_between_centers:
+            if dyn_x < agent_x and (case_num == 5 or case_num == 6):
+                dyn_x = agent_x - safe_distance_between_centers
+            else:
+                dyn_x = agent_x + safe_distance_between_centers \
+                        + dynamic_new_dx
 
     agent = [agent_x, agent_y, agent_theta, agent_v, agent_steer]
     goal = [goal_x, goal_y, goal_theta, goal_v, goal_steer]
@@ -522,6 +529,7 @@ def getCaseValetDynamicObst(staticObstsInfo, car_config, case_num):
     Eps_max = np.random.choice(np.linspace(Eps_min_possible, Eps_max_possible, 20))
     boundary_action = [a_max, Eps_max]
     dynamic_config["movement_func_params"] = {"boundary_action": boundary_action}
+    
     if case_num == 1 or case_num == 2 or case_num == 3 or \
             case_num == 4 or case_num == 9 or case_num == 10:
         if case_num == 2 or case_num == 4 or case_num == 10:
@@ -529,15 +537,9 @@ def getCaseValetDynamicObst(staticObstsInfo, car_config, case_num):
         else:
             stop_steps = list(range(30, 70))
         stop_step = np.random.choice(stop_steps)
-
-        #dynamic_config["movement_func_params"]["stop_step"] = stop_step
-        # test
         dynamic_config["movement_func_params"]["stop_step"] = int(stop_step)
 
         dynamic_do_reverse_after_stop = np.random.choice([True, False, False])
-        #dynamic_config["movement_func_params"]["dynamic_do_reverse_after_stop"] \
-        #                                            = dynamic_do_reverse_after_stop
-        # test
         dynamic_config["movement_func_params"]["dynamic_do_reverse_after_stop"] \
                                                     = bool(dynamic_do_reverse_after_stop)
         if dynamic_do_reverse_after_stop:
@@ -1057,7 +1059,6 @@ def getValetStartGoalPose(staticObstsInfo, car_config, union, forward_task):
 
     return [start_x, start_y, start_theta, start_v, start_steer], \
            [goal_x, goal_y, goal_theta, 0, 0]
-
 
 def trySatisfyStartGoalConditions(start_x, start_y,
                                   start_theta,

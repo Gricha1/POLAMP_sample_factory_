@@ -106,9 +106,7 @@ def make_custom_env_func(full_env_name, cfg=None, env_config=None):
         'evaluation': cfg.evaluation,
     }
 
-    cfg.other_keys = environment_config
-
-    return ObsEnvironment(full_env_name, cfg['other_keys'])
+    return ObsEnvironment(full_env_name, environment_config)
 
 
 def add_extra_params_func(env, parser):
