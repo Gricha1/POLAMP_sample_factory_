@@ -23,13 +23,23 @@ with open("configs/validate_config.json", 'r') as f:
 with open("configs/environment_configs.json", 'r') as f:
     our_env_config = json.load(f)
 
+with open("configs/dataset_configs.json", 'r') as f:
+    dataset_config = json.load(f)
+
 def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
+    assert our_env_config["validate_env"], \
+        "env is not for validation, set \"validate_env\" param to True in env config"
     if use_wandb:
         wandb.init(project='validate_polamp', entity='grisha1')
     i = 0
     while i < 1:
         cfg = load_from_checkpoint(init_cfg)
-        print("debug env keys:", our_env_config.keys())
+        print("debug env keys:")
+        for key in our_env_config.keys():
+            print(key, ":", our_env_config[key])
+        print("debug dataset keys:")
+        for key in dataset_config.keys():
+            print(key, ":", dataset_config[key])
         render_environment = our_env_config["validate_with_render"]
         get_observation = our_env_config["validate_with_observation"]
         done_save_img = False
@@ -74,8 +84,7 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
         total_tasks = 0
         start_time = time.time()
         count_map = 0
-        print("validation environment:")
-        print("dataset size:", env.Tasks.keys())
+        print("dataset size:", len(env.Tasks.keys()))
         for val_key in env.Tasks:
             total_tasks += 1
             count_map += 1

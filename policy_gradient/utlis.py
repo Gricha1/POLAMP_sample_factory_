@@ -17,8 +17,7 @@ def getTrainValidateTasks(tasks_config, car_config, train):
         for i in range(count_task_per_case):
             train_case_task = getCaseTask(case_num,
                                           tasks_config, 
-                                          car_config, 
-                                          train=train)
+                                          car_config)
             tasks.extend(train_case_task)
 
     return tasks
@@ -53,7 +52,7 @@ def ChangeTaskFormat(generated_tasks):
         
     return maps, generated_tasks_map
 
-def getCaseTask(case_num, tasks_config, car_config, train=True):
+def getCaseTask(case_num, tasks_config, car_config):
     """
     return:
         [
@@ -72,14 +71,9 @@ def getCaseTask(case_num, tasks_config, car_config, train=True):
     union = tasks_config['union']
     
     # static obsts params:
-    if train:
-        parking_heights = np.linspace(2.7 + 0.2, 2.7 + 5, 20)
-        parking_widths = np.linspace(4.5, 7, 20)
-        road_widths = np.linspace(3, 6, 20)
-    else:
-        parking_heights = np.linspace(2.7 + 0.2, 2.7 + 5, 2)
-        parking_widths = np.linspace(4.5, 7, 2)
-        road_widths = np.linspace(3, 6, 2)
+    parking_heights = np.linspace(2.7 + 0.2, 2.7 + 5, 20)
+    parking_widths = np.linspace(4.5, 7, 20)
+    road_widths = np.linspace(3, 6, 20)
     bottom_left_boundary_heights = np.linspace(4.5, 6, 20)
     upper_boundary_widths = np.linspace(0.5, 3, 20)
     upper_boundary_heights = np.linspace(14, 16, 20)
