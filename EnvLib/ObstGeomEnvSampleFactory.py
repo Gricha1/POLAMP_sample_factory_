@@ -483,7 +483,6 @@ class ObsEnvironment(gym.Env):
 
         for vehicle in self.vehicles:
             action = vehicle.get_action()
-            action = [0, 0]
             vehicle.step(action)
                         
         self.current_state = new_state
