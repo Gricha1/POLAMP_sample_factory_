@@ -12,9 +12,9 @@ def getTrainValidateTasks(tasks_config, car_config, train):
         where task1 = ([stat_obst_1, ...], [start, goal], [dyn_obst_1, ...])
     """
     tasks = [] 
+    count_task_per_case = 1000 if train else 10
     for case_num in range(1, 12 + 1):
-        
-        for i in range(1000):
+        for i in range(count_task_per_case):
             train_case_task = getCaseTask(case_num,
                                           tasks_config, 
                                           car_config, 
