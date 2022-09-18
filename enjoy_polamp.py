@@ -17,9 +17,6 @@ from sample_factory.algorithms.utils.multi_agent_wrapper import MultiAgentWrappe
 from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
 
-with open("configs/validate_config.json", 'r') as f:
-    validate_config = json.load(f)
-
 with open("configs/environment_configs.json", 'r') as f:
     our_env_config = json.load(f)
 
@@ -34,6 +31,7 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
     i = 0
     while i < 1:
         cfg = load_from_checkpoint(init_cfg)
+
         print("debug env keys:")
         for key in our_env_config.keys():
             print(key, ":", our_env_config[key])
@@ -42,11 +40,14 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
             print(key, ":", dataset_config[key])
         render_environment = our_env_config["validate_with_render"]
         get_observation = our_env_config["validate_with_observation"]
+        not_done_episode_render = our_env_config["validate_with_not_done_episode_render"]
+        if not_done_episode_render:
+            is_rendered_not_done_episode = False
+        assert not(not render_environment and not_done_episode_render), \
+            "to render not done episode, \"validate_with_render\" should be True, " \
+            + f"but given {render_environment}"
         done_save_img = False
-        debug_not_done_save_img = False
-        debug_forward_move = None
-        debug_dataset = False
-        debug_testdataset = False
+
         render_action_repeat = cfg.render_action_repeat if \
             cfg.render_action_repeat is not None else cfg.env_frameskip
         if render_action_repeat is None:
@@ -84,24 +85,30 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
         total_tasks = 0
         start_time = time.time()
         count_map = 0
+        episode_done = None
         print("dataset size:", len(env.Tasks.keys()))
-        for val_key in env.Tasks:
+        task_id = 0
+        task_count = len(env.Tasks)
+        while task_id < task_count:
+            val_key = list(env.Tasks.keys())[task_id]
+            last_episode_done = episode_done
             total_tasks += 1
             count_map += 1
-            eval_tasks = len(env.Tasks[val_key])
-            print("Num map:", count_map, "out of", len(env.Tasks), 
-                    "count task:", eval_tasks)
-            id = 0
-            if debug_not_done_save_img:
+            if not_done_episode_render:
                 render_environment = False
                 get_observation = False
-                if not episode_done and not saved_last_image:
-                    id = id - 1
+                if not (last_episode_done is None) and \
+                        not last_episode_done and \
+                        not is_rendered_not_done_episode:
+                    task_id -= 1
+                    total_tasks -= 1
+                    count_map -= 1
                     render_environment = True
                     get_observation = True
-                    saved_last_image = True
+                    is_rendered_not_done_episode = True
                 else:
-                    saved_last_image = False
+                    is_rendered_not_done_episode = False
+            print("task number:", task_id + 1, "out of", len(env.Tasks))
             start_time = time.time()
             obs = env.reset(val_key=val_key)
             rnn_states = torch.zeros([env.num_agents, get_hidden_size(cfg)], 
@@ -195,18 +202,17 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                                 episode_reward[agent_i] = 0
 
                         episode_done = False
-                        if all(finished_episode):
-                            print(f"finished_episode: {finished_episode}")
+                        if finished_episode[0]:
+                            print(f"finished_episode: {finished_episode[0]}")
                             if "Collision" in infos[0]:
                                 print("$$ Collision $$")
                                 collision_tasks += 1
-                            elif "SoftEps" in infos[0]:
-                                print("$$ SoftEps $$")
-                            elif num_frames != max_num_frames:
+                            elif "Max episode reached" in infos[0]:
+                                max_steps_tasks += 1
+                                print("$$ Max episode reached $$")
+                            else:
                                 successed_tasks += 1
                                 episode_done = True
-                            else:
-                                max_steps_tasks += 1
                             finished_episode = [False] * env.num_agents
                             avg_episode_rewards_str, avg_true_reward_str = '', ''
                             for agent_i in range(env.num_agents):
@@ -235,8 +241,8 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
             #    continue
 
             done = False
-            if not ("Collision" in infos[0]) and not ("SoftEps" in infos[0]) \
-                and num_frames != max_num_frames:
+            if not ("Collision" in infos[0]) and \
+                    num_frames != max_num_frames:
                 done = True 
             if render_environment and use_wandb and ((done_save_img and done) or \
                 not done_save_img):
@@ -256,6 +262,7 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
             end_time = time.time()
             print("spended time:", abs(end_time - start_time))
             env.close()
+            task_id += 1
         
         end_time = time.time()
         print("final time: ", end_time - start_time)
