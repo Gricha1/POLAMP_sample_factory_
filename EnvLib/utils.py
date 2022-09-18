@@ -22,7 +22,6 @@ def angleIntersection(angle1, angle2, angle):
             return False
     else:
         dist1 = angle2 - angle1
-        # dist2 = math.pi - angle2 + angle1 + math.pi
         if dist1 > math.pi:
             if (angle < 0 and angle >= angle1):
                 return False
@@ -69,7 +68,6 @@ def separatingAxes(a, axes):
         next = a[(i + 1) % len(a)]
         edge = np.array(next) - np.array(current) 
         new_edge = edge / (np.sqrt(np.sum(edge ** 2)) + 1e-6)
-        # print(f"new_edge : {new_edge}")
         axes.append([-new_edge[1], new_edge[0]])
 
 def project(a, axis):

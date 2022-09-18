@@ -11,8 +11,8 @@
     "max_episode_steps": 900,
     "validate_env": 1,
     "validate_test_dataset": 0,
-    "validate_with_reward": 0,
+    "validate_with_reward": 1,
     "validate_with_render": 1,
-    "validate_with_observation": 0,
-    "validate_with_not_done_episode_render": 1
+    "validate_with_observation": 1,
+    "validate_with_not_done_episode_render": 0
 }

@@ -48,6 +48,7 @@ def mod2pi(x):
     else:
         if v > math.pi:
             v -= 2.0 * math.pi
+            
     return v
 
 
@@ -327,17 +328,12 @@ def calc_paths(sx, sy, syaw, gx, gy, gyaw, maxc, step_size):
 
 
 def reedsSheppSteer(from_state, to_state):
-
-    #s_x, s_y, s_yaw = from_state[0], from_state[1], from_state[2]
-    #g_x, g_y, g_yaw = to_state[0], to_state[1], to_state[2]
     s_x, s_y, s_yaw = from_state.x, from_state.y, from_state.theta
     g_x, g_y, g_yaw = to_state.x, to_state.y, to_state.theta
     
     step_size = 0.1
-    #radius = 2.57 / math.tan(28)
-    #curvature = 0.1
     curvature = 0.2
-    #print("debug curv:", curvature)
+    
     paths = calc_paths(s_x, s_y, s_yaw, g_x, g_y, g_yaw, curvature, step_size)
     if not paths:
         return None, None, None, None, None  # could not generate any path
@@ -346,46 +342,4 @@ def reedsSheppSteer(from_state, to_state):
     best_path_index = paths.index(min(paths, key=lambda p: abs(p.L)))
     b_path = paths[best_path_index]
 
-    # b_path.ctypes, b_path.lengths
-
     return [(b_path.x[i], b_path.y[i], b_path.yaw[i], 0., 0.) for i in range(len(b_path.x))], b_path.ctypes, b_path.lengths
-
-
-# def main():
-#     print("Reeds Shepp path planner sample start!!")
-
-#     start_x = -1.0  # [m]
-#     start_y = -4.0  # [m]
-#     start_yaw = np.deg2rad(-20.0)  # [rad]
-#     start = [start_x, start_y, start_yaw]
-#     end_x = 5.0  # [m]
-#     end_y = 5.0  # [m]
-#     end_yaw = np.deg2rad(25.0)  # [rad]
-#     end = [end_x, end_y, end_yaw]
-
-#     curvature = 0.1
-#     step_size = 0.05
-
-#     xs, ys, yaws, modes, lengths = reedsSheppSteer(start, end)
-#     print(xs)
-
-#     if show_animation:  # pragma: no cover
-#         plt.cla()
-#         plt.plot(xs, ys, label="final course " + str(modes))
-#         # print(f"{lengths=}")
-
-#         # plotting
-#         plot_arrow(start_x, start_y, start_yaw)
-#         plot_arrow(end_x, end_y, end_yaw)
-
-#         plt.legend()
-#         plt.grid(True)
-#         plt.axis("equal")
-#         plt.show()
-
-#     if not xs:
-#         assert False, "No path"
-
-
-# if __name__ == '__main__':
-#     main()

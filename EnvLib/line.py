@@ -106,13 +106,6 @@ class Line:
 
         return Point(x, y)
     
-    # def getProj(self, point):
-    #     normal = Line(point, point + self.getNorm())
-    #     return normal.isIntersect(self)
-    
-    # def getNorm(self):
-    #     return Vec2d(self.a, self.b)
-
 def rotate(vector, angle):
     x = cos(angle)*vector.x - sin(angle)*vector.y
     y = sin(angle)*vector.x + cos(angle)*vector.y

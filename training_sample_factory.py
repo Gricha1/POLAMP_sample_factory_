@@ -24,6 +24,7 @@ from sample_factory.envs.env_registry import global_env_registry
 from sample_factory.run_algorithm import run_algorithm
 from EnvLib.ObstGeomEnvSampleFactory import *
 from utils_SF.residual_net import ResnetEncoder
+from dataset_generation.utlis import *
 
 use_wandb = True
 

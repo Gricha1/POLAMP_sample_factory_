@@ -1,7 +1,6 @@
 from tkinter import E
 import gym
 import matplotlib.pyplot as plt
-from planning.generateMap import generateTasks
 from .line import *
 from math import pi
 import numpy as np
@@ -9,11 +8,9 @@ from .Vec2d import Vec2d
 from .utils import *
 from math import cos, sin, tan
 from scipy.spatial import cKDTree
-from planning.utilsPlanning import *
 import time
 import cv2 as cv
 from planning.reedShepp import *
-from policy_gradient.utlis import *
 
 class State:
     def __init__(self, x, y, theta, v, steer, 
