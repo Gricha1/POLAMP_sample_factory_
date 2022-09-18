@@ -24,7 +24,6 @@ class MultiAgentWrapper(Wrapper):
 
     def reset(self, **kwargs):
         obs = self.env.reset(**kwargs)
-        #print("DEBUG mult agent wrapper", obs.keys())
         return [obs]
 
     def step(self, action):

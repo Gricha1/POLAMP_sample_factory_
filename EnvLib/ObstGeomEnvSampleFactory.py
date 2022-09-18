@@ -11,6 +11,7 @@ from scipy.spatial import cKDTree
 import time
 import cv2 as cv
 from planning.reedShepp import *
+from dataset_generation.utlis import *
 
 class State:
     def __init__(self, x, y, theta, v, steer, 
@@ -335,11 +336,10 @@ class ObsEnvironment(gym.Env):
         
         return start, goal 
 
-    def _setTask(self, tasks, idx, obstacles, set_task_without_dynamic_obsts):
-        assert len(tasks) > 0, \
+    def _setTask(self, task, obstacles, set_task_without_dynamic_obsts):
+        assert len(task) > 0, \
             "incorrect count of tasks must be len(tasks) > 0 but given 0"
-        i = np.random.randint(len(tasks)) if idx is None else idx
-        current_task = tuple(tasks[i])
+        current_task = tuple(task[0])
         if(len(current_task) == 2):
             current, goal = current_task
         else:
@@ -360,7 +360,12 @@ class ObsEnvironment(gym.Env):
         self.old_state = self.current_state
         self.vehicle.reset(self.current_state)
 
-    def reset(self, idx=None, val_key=None):
+    def reset(self, val_key=None):
+        # add this to prevent reset when step returns DONE = TRUE
+        # when step returns DONE = TRUE, sample factory wrapper do reset
+        if self.validate_env and val_key is None:
+            return None
+
         self.maps = dict(self.maps_init)
         set_task_without_dynamic_obsts = np.random.randint(5) == 0
         self.stepCounter = 0
@@ -387,12 +392,19 @@ class ObsEnvironment(gym.Env):
         #        elif val_key == "map6":
         #            self.stop_dynamic_step = 200
 
-        index = np.random.randint(len(self.lst_keys))
-        self.map_key = self.lst_keys[index]
+        if not self.validate_env:
+            index = np.random.randint(len(self.lst_keys))
+            self.map_key = self.lst_keys[index]
+        else:
+            assert not(val_key is None), \
+                "in reset func: val_key must be set in validate env" \
+                + f"but val_key is: {val_key}"
+            self.map_key = val_key
         self.obstacle_map = self.maps[self.map_key]
-        tasks = self.Tasks[self.map_key]
-        self._setTask(tasks, idx, self.obstacle_map, 
-                     set_task_without_dynamic_obsts)
+        task = self.Tasks[self.map_key]
+
+        self._setTask(task, self.obstacle_map, 
+                      set_task_without_dynamic_obsts)
 
         for obstacle in self.obstacle_map:
             static_obst = State(None, None, theta=obstacle[2], v=0, steer=0, 

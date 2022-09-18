@@ -84,16 +84,13 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
         collision_tasks = 0
         total_tasks = 0
         start_time = time.time()
-        count_map = 0
         episode_done = None
         print("dataset size:", len(env.Tasks.keys()))
         task_id = 0
         task_count = len(env.Tasks)
         while task_id < task_count:
-            val_key = list(env.Tasks.keys())[task_id]
             last_episode_done = episode_done
             total_tasks += 1
-            count_map += 1
             if not_done_episode_render:
                 render_environment = False
                 get_observation = False
@@ -102,14 +99,18 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
                         not is_rendered_not_done_episode:
                     task_id -= 1
                     total_tasks -= 1
-                    count_map -= 1
                     render_environment = True
                     get_observation = True
                     is_rendered_not_done_episode = True
                 else:
                     is_rendered_not_done_episode = False
             print("task number:", task_id + 1, "out of", len(env.Tasks))
+            val_key = list(env.Tasks.keys())[task_id]
             start_time = time.time()
+
+            # test
+            #print("1 debug vall_key:", val_key)
+
             obs = env.reset(val_key=val_key)
             rnn_states = torch.zeros([env.num_agents, get_hidden_size(cfg)], 
                                         dtype=torch.float32, device=device)

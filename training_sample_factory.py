@@ -93,6 +93,7 @@ def make_custom_env_func(full_env_name, cfg=None, env_config=None):
         tasks_config["static"] = dataset_config["static"]
         tasks_config["dynamic"] = dataset_config["dynamic"]
         generated_tasks = getTrainValidateTasks(tasks_config, car_config, train=True)
+
     maps, generated_tasks = ChangeTaskFormat(generated_tasks)
   
     environment_config = {
