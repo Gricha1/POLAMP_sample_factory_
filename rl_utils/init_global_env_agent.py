@@ -31,9 +31,6 @@ from utils_SF.residual_net import ResnetEncoder
 
 use_wandb = False
 
-with open("configs/train_configs.json", 'r') as f:
-    train_config = json.load(f)
-
 with open("configs/environment_configs.json", 'r') as f:
     our_env_config = json.load(f)
 
@@ -85,6 +82,7 @@ def custom_parse_args(argv=None, evaluation=False):
     return cfg
 
 def make_custom_env_func(full_env_name, cfg=None, env_config=None):
+    '''
     maps = {}
     trainTask = {}
     valTasks = {}
@@ -93,13 +91,13 @@ def make_custom_env_func(full_env_name, cfg=None, env_config=None):
     if our_env_config["union"]:
         environment_config = {
             'car_config': car_config,
-            'tasks': trainTask,
-            'valTasks': valTasks,
-            'maps': maps,
+            # 'tasks': trainTask,
+            # 'valTasks': valTasks,
+            # 'maps': maps,
             'our_env_config' : our_env_config,
             'reward_config' : reward_config,
             'evaluation': cfg.evaluation,
-            "second_goal" : second_goal
+            # "second_goal" : second_goal
         }
     else:
         environment_config = {
@@ -115,6 +113,18 @@ def make_custom_env_func(full_env_name, cfg=None, env_config=None):
     cfg.other_keys = environment_config
 
     return ObsEnvironment(full_env_name, cfg['other_keys'])
+    '''
+
+    environment_config = {
+        'car_config': car_config,
+        'Tasks': [],
+        'maps': [],
+        'our_env_config' : our_env_config,
+        'reward_config' : reward_config,
+        'evaluation': cfg.evaluation,
+    }
+
+    return ObsEnvironment(full_env_name, environment_config)
 
 def add_extra_params_func(env, parser):
     p = parser

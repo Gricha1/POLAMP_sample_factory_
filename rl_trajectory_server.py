@@ -3,10 +3,11 @@ import time
 import sys
 import argparse
 from bottle import run, post, request, response
-from policy_gradient.utlis import generateTestDataSet
+from dataset_generation.utlis import ChangeTaskFormat
 sys.path.insert(0, "sample-factory/")
 from rl_utils.init_global_env_agent import init_global_env_agent
 from rl_utils.rl_algorithm import run_algorithm
+from rl_utils.utils import *
 
 use_wandb = False
 if use_wandb:
@@ -20,13 +21,13 @@ env, agent, cfg = init_global_env_agent()
 @post('/process')
 def my_process():
   request_ = json.loads(request.body.read())
-  map_ = request_["map"]
-  trainTask = request_["task"]
-  valTask = request_["task"]
-  second_goal = request_["second_goal"]
-  print("debug count of tasks:", "train:", 
-          len(trainTask), "val:", len(valTask))
-  print("debug count of maps:", len(map_))
+  request_task = request_["task"]
+
+  generated_tasks = transformHTTPRequestToTask(request_task)
+  print("debug count task:", len(generated_tasks))
+  print("debug task:", generated_tasks)
+
+  maps, generated_tasks = ChangeTaskFormat(generated_tasks)
 
   ####DEBUG
   #with open("configs/environment_configs.json", 'r') as f:
@@ -39,7 +40,7 @@ def my_process():
   #print("correct tasks:", trainTasks)
   ######
 
-  env.update_task(map_, trainTask, valTask, second_goal)
+  env.update_task(maps, generated_tasks)
 
   trajectory_info, run_info = run_algorithm(cfg, env, agent, 
                         max_steps=env.max_episode_steps, wandb=wandb)

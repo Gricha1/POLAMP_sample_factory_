@@ -20,7 +20,14 @@ def run_algorithm(cfg, env, agent, max_steps=30, wandb=None):
     print("run info:")
     print("steps for episode", max_steps)
     last_render_start = time.time()
-    for val_key in env.valTasks:
+    task_id = 0
+    task_count = len(env.Tasks)
+    assert task_count == 1, "task count should be 1" \
+        + f"but given {task_count}"
+    
+    while task_id < task_count:
+        val_key = list(env.Tasks.keys())[task_id]
+
         trajectory_info["x"] = []
         trajectory_info["y"] = []
         trajectory_info["v"] = []
@@ -32,7 +39,9 @@ def run_algorithm(cfg, env, agent, max_steps=30, wandb=None):
 
         id = 0
         start_time = time.time()
-        obs = env.reset(idx=id, fromTrain=False, val_key=val_key)
+
+        obs = env.reset(val_key=val_key)
+
         rnn_states = torch.zeros([env.num_agents, 
                 get_hidden_size(cfg)], dtype=torch.float32, device=device)
         episode_reward = np.zeros(env.num_agents)
@@ -111,6 +120,7 @@ def run_algorithm(cfg, env, agent, max_steps=30, wandb=None):
         trajectory_info["accelerations"].append(0)
 
         end_time = time.time()
+        task_id += 1
         print("run spended time:", abs(end_time - start_time))
         print("run trajectory len:", len(trajectory_info["x"]))
         print("run status:", run_info)

@@ -831,21 +831,7 @@ def getTestTasks(car_config):
 
         return action
     dynamic_config["movement_func"] = move
-    '''
-    map_ = [
-            [upper_boundary_center_x, upper_boundary_center_y, 
-            0, upper_boundary_width, upper_boundary_height], 
-            [bottom_left_boundary_center_x + bottom_left_right_dx_, 
-        bottom_left_boundary_center_y, 0, bottom_left_boundary_width,
-            bottom_left_boundary_height],
-            [bottom_right_boundary_center_x - bottom_left_right_dx_, 
-        bottom_right_boundary_center_y, 0, bottom_right_boundary_width, 
-            bottom_right_boundary_height], 
-            [bottom_down_center_x, bottom_down_center_y, 
-            0, bottom_down_width, bottom_down_height]
-           ]
-    '''
-
+    
     forward_start_x_ = bottom_left_boundary_center_x \
                                 - bottom_left_boundary_height \
                                 + car_config["length"] / 2 \

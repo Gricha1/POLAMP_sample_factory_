@@ -256,9 +256,8 @@ class ObsEnvironment(gym.Env):
             self.map_key = self.lst_keys[index]
             self.obstacle_map = self.maps[self.map_key]
 
-    def update_task(self, maps, Tasks, 
-                    valTasks, second_goal):
-        self.Tasks = Tasks
+    def update_task(self, maps, generated_tasks):
+        self.Tasks = generated_tasks
         self.maps_init = maps
         self.maps = dict(maps)
 
@@ -266,17 +265,6 @@ class ObsEnvironment(gym.Env):
         index = np.random.randint(len(self.lst_keys))
         self.map_key = self.lst_keys[index]
         self.obstacle_map = self.maps[self.map_key]
-
-        assert 1 == 0, "second goal not deleted in update task"
-        if self.unionTask:
-            if len(second_goal) != 0:
-                self.second_goal = State(second_goal[0], 
-                                         second_goal[1],
-                                         second_goal[2],
-                                         second_goal[3],
-                                         second_goal[4])
-            else:
-                self.second_goal = None
 
     def _getBB(self, state):
         x = state.centred_x
@@ -382,15 +370,6 @@ class ObsEnvironment(gym.Env):
             self.new_RS = None
         if self.validate_env:
             set_task_without_dynamic_obsts = False
-            # test
-        #    if self.validate_test_dataset:
-        #        self.stop_dynamic_step = 1200
-        #        if val_key == "map0" or val_key == "map2":
-        #            self.stop_dynamic_step = 100
-        #        elif val_key == "map1" or val_key == "map3":
-        #            self.stop_dynamic_step = 110
-        #        elif val_key == "map6":
-        #            self.stop_dynamic_step = 200
 
         if not self.validate_env:
             index = np.random.randint(len(self.lst_keys))

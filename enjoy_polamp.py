@@ -107,10 +107,6 @@ def enjoy(init_cfg, max_num_frames=1200, use_wandb=True):
             print("task number:", task_id + 1, "out of", len(env.Tasks))
             val_key = list(env.Tasks.keys())[task_id]
             start_time = time.time()
-
-            # test
-            #print("1 debug vall_key:", val_key)
-
             obs = env.reset(val_key=val_key)
             rnn_states = torch.zeros([env.num_agents, get_hidden_size(cfg)], 
                                         dtype=torch.float32, device=device)

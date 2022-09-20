@@ -147,9 +147,21 @@ def create_task(data):
             f"theta for dynamic obst isn't corrent, \
                 theta is {theta} must be 0 <= <= 2pi" 
         v = sqrt(v_x * v_x + v_y * v_y)
+        dynamic_config = {}
+        test_movement_func_image = {}
+        movement_func_params = {}
+        max_vel = 1
+        width = 2.3
+        length = 4
+        dynamic_config["movement_func"] = test_movement_func_image
+        dynamic_config["movement_func_params"] = movement_func_params
+        dynamic_config["boundary_v"] = max_vel
+        dynamic_config["width"] = width
+        dynamic_config["length"] = length
         dynamic_obsts.append([normalized_x, 
                               normalized_y, 
-                              theta, v, 0])
+                              theta, v, 0, 
+                              dynamic_config])
 
     print("****************************************")
     print("NEW MASSAGE")
@@ -164,11 +176,5 @@ def create_task(data):
     generated_goal = [parking_pos[0], parking_pos[1] - car_config["wheel_base"] / 2, 
                         90 * (pi / 180), 0, 0]
     generated_task = [generated_start, generated_goal]
-    if len(dynamic_obsts) != 0:
-        generated_task.append(dynamic_obsts)
-    map_ = {}
-    task = {}
-    map_["map0"] = generated_map
-    task["map0"] = [generated_task]
- 
-    return map_, task, generated_goal
+    
+    return (generated_map, generated_task, dynamic_obsts)
