@@ -66,7 +66,7 @@ class Vehicle:
         gear = self.gear
         a, Eps = self.movement_func([x, y, theta, v, steer], 
                                      self.current_steps, 
-                                     **self.movement_func_params)
+                                     dynamic_config = self.movement_func_params)
 
         return [a, Eps]
 
