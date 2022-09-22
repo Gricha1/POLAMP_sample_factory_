@@ -71,7 +71,7 @@ def getCaseTask(case_num, tasks_config, car_config):
     union = tasks_config['union']
     
     # static obsts params:
-    parking_heights = np.linspace(2.7 + 0.2, 2.7 + 5, 20)
+    parking_heights = np.linspace(2.7 - 0.5, 2.7 + 5, 20)
     parking_widths = np.linspace(4.5, 7, 20)
     road_widths = np.linspace(3, 6, 20)
     bottom_left_boundary_heights = np.linspace(4.5, 6, 20)
@@ -236,6 +236,58 @@ def trySatisfyCollisionConditions(staticObstsInfo,
             else:
                 dyn_x = agent_x - safe_distance_between_centers - dynamic_new_dx
             dyn_y = agent_y + safe_distance_between_centers + dynamic_new_dy
+    
+    # set executable initial distance between dyn obst and agent
+    if case_num == 1 or case_num == 2 or \
+            case_num == 3 or case_num == 4 or case_num == 5 or \
+            case_num == 6:
+        safe_distance_dxs = np.linspace(10, 20, 20)
+        safe_distance_dx = np.random.choice(safe_distance_dxs)
+        if agent_y - agent_radius - self_d_radius <= \
+                dyn_y - dyn_width / 2 <= agent_y + agent_radius + self_d_radius or \
+                agent_y - agent_radius - self_d_radius <= \
+                dyn_y + dyn_width / 2 <= agent_y + agent_radius + self_d_radius:
+            dyn_x = agent_x + safe_distance_between_centers + safe_distance_dx
+    if case_num == 7 or case_num == 8 or \
+            case_num == 9 or case_num == 10:
+        safe_distance_dxs = np.linspace(5, 10, 20)
+        safe_distance_dx = np.random.choice(safe_distance_dxs)
+        if agent_y - agent_radius - self_d_radius <= \
+                dyn_y - dyn_width / 2 <= agent_y + agent_radius + self_d_radius or \
+                agent_y - agent_radius - self_d_radius <= \
+                dyn_y + dyn_width / 2 <= agent_y + agent_radius + self_d_radius:
+            dyn_x = agent_x - safe_distance_between_centers - safe_distance_dx
+
+    # move dynamic obst if it stays on the same x as parking place
+    if case_num == 1 or case_num == 2 or \
+            case_num == 9 or case_num == 10:
+        safe_distance_dxs = np.linspace(5, 8, 20)
+        safe_distance_dx = np.random.choice(safe_distance_dxs)
+        dynamic_config["movement_func_params"]["collision_condition"] = True
+        dynamic_config["movement_func_params"]["parking_place_x"] = goal_x
+        dynamic_config["movement_func_params"]["safe_radius"] = \
+            agent_radius + self_d_radius + safe_distance_dx
+        dynamic_config["movement_func_params"]["collision_move_forward"] = \
+            np.random.choice([True, False])
+
+    # dynamic obst which is moving straight parallel to OX, should not fill all space
+    # on the road
+    if (case_num == 1 or case_num == 2 or \
+            case_num == 5 or case_num == 8 or case_num == 10):
+        safe_dys = np.linspace(2.2, 3, 10)
+        safe_dy = np.random.choice(safe_dys)
+        if dyn_y - dyn_width / 2 - buttom_road_edge_y <= agent_width + safe_dy:
+            dyn_y = buttom_road_edge_y + agent_width + dyn_width / 2
+            dyn_y += safe_dy
+    if (case_num == 3 or case_num == 4 or \
+            case_num == 6 or case_num == 7 or case_num == 9):
+        safe_dys = np.linspace(2.2, 3, 10)
+        safe_dy = np.random.choice(safe_dys)
+        if (buttom_road_edge_y + 2 * road_width - (dyn_y + dyn_width / 2)) <= \
+                agent_width + safe_dy:
+            dyn_y = buttom_road_edge_y + 2 * road_width \
+                - agent_width - dyn_width / 2
+            dyn_y -= safe_dy
 
     agent = [agent_x, agent_y, agent_theta, agent_v, agent_steer]
     goal = [goal_x, goal_y, goal_theta, goal_v, goal_steer]
@@ -583,6 +635,17 @@ def getCaseValetDynamicObst(staticObstsInfo, car_config, case_num):
                     a = min(boundary_action[0], abs(last_state[3]) / time_step)
                 elif last_state[3] == 0:
                     a = 0
+            if "collision_condition" in args:
+                if last_state[3] == 0 and not dynamic_do_reverse_after_stop:
+                    if last_state[0] - args["safe_radius"] <= \
+                            args["parking_place_x"] <= \
+                            last_state[0] + args["safe_radius"]:
+                        if args["collision_move_forward"]:
+                            a = np.random.choice(
+                                np.linspace(0, boundary_action[0], 10))
+                        else:
+                            a = -np.random.choice(
+                                np.linspace(0, boundary_action[0], 10))
             action = [a, Eps]
 
             return action
@@ -642,21 +705,6 @@ def trySatisfyDynamicConditions(staticObstsInfo, car_config, dynamic, dynamic_co
                     - width / 2 - shift_from_static_boundary 
 
     init_v = min(dynamic_config["boundary_v"], init_v)
-
-    # dynamic obst which is moving straigh parallel to OX, might fills all space
-    # on the road
-    if (case_num == 1 or case_num == 2 or \
-            case_num == 5 or case_num == 8 or case_num == 10):
-        safe_dy = 1.2
-        if (y - width / 2 - buttom_road_edge_y) <= agent_width + safe_dy:
-            dy = 1.2
-            y += dy
-    if (case_num == 3 or case_num == 4 or \
-            case_num == 6 or case_num == 7 or case_num == 9):
-        safe_dy = 1.2
-        if (buttom_road_edge_y + 2 * road_width - (y + width / 2)) <= agent_width + safe_dy:
-            dy = 2
-            y -= dy
         
     return [x, y, theta, init_v, steer]
 
@@ -831,7 +879,7 @@ def getTestTasks(car_config):
 
         return action
     dynamic_config["movement_func"] = move
-    
+
     forward_start_x_ = bottom_left_boundary_center_x \
                                 - bottom_left_boundary_height \
                                 + car_config["length"] / 2 \
