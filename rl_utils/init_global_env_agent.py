@@ -29,8 +29,6 @@ from sample_factory.run_algorithm import run_algorithm
 from EnvLib.ObstGeomEnvSampleFactory import *
 from utils_SF.residual_net import ResnetEncoder
 
-use_wandb = True
-
 with open("configs/environment_configs.json", 'r') as f:
     our_env_config = json.load(f)
 
@@ -74,10 +72,7 @@ def custom_parse_args(argv=None, evaluation=False):
     
     cfg.kl_loss_coeff = 0.3
     cfg.value_loss_coeff = 0.5
-    
-    cfg.use_wandb = use_wandb
-    cfg.with_wandb = use_wandb
-    
+        
     return cfg
 
 def make_custom_env_func(full_env_name, cfg=None, env_config=None):

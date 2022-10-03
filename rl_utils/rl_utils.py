@@ -1,6 +1,7 @@
 from math import pi
 from numpy import sqrt
 import json
+from dataset_generation.utlis import *
 
 with open("modules/tools/valet_parking_rl/POLAMP_sample_factory_/configs/car_configs.json", 'r') as f:
     car_config = json.load(f)
@@ -16,9 +17,6 @@ def degToRad(deg):
     return deg * ONE_RAD_GRAD
 
 def generate_map(roi_boundaries, vehicle_pos, parking_pos):
-    '''
-        return list of [left_bottom, right_bottom, top]
-    '''
     '''
         roi_boundaries[0] = (roi_boundaries[0].x, roi_boundaries[0].y)
         vehicle_pos = (vehicle_pos.x, vehicle_pos.y)
@@ -43,7 +41,7 @@ def generate_map(roi_boundaries, vehicle_pos, parking_pos):
     assert roi_boundaries[1].y > roi_boundaries[2].y, \
         "parking width is not corrent from roi boundary points"
     parking_width = roi_boundaries[1].y - roi_boundaries[2].y
-    trained_parking_height = 2.7
+    trained_parking_height = 2.7 + 0.6
     trained_parking_width = 4.5
     shift_left_boundary_x = 0 # shift because use trained_parking_height
     if trained_parking_height < parking_height:
@@ -56,32 +54,43 @@ def generate_map(roi_boundaries, vehicle_pos, parking_pos):
     upper_boundary_width = 0.5 # any value
     upper_boundary_height = 17
     bottom_left_boundary_width = parking_width / 2
-    bottom_right_boundary_width = parking_width / 2
-    bottom_right_boundary_height = bottom_left_boundary_height
+    #bottom_right_boundary_width = parking_width / 2
+    #bottom_right_boundary_height = bottom_left_boundary_height
     bottom_left_boundary_center_x = roi_boundaries[1].x - 6 + shift_left_boundary_x
     bottom_left_boundary_center_y = roi_boundaries[0].y - bottom_left_boundary_width
-    bottom_right_boundary_center_x = bottom_left_boundary_center_x \
-                + bottom_left_boundary_height + parking_height \
-                + bottom_right_boundary_height
-    bottom_right_boundary_center_y = bottom_left_boundary_center_y
-    bottom_road_edge_y = bottom_left_boundary_center_y + \
-                    bottom_left_boundary_width 
-    bottom_down_width = upper_boundary_width 
-    bottom_down_height = parking_height / 2 
-    upper_boundary_center_x = bottom_left_boundary_center_x \
-                    + bottom_left_boundary_height + parking_height / 2
-    bottom_down_center_x = upper_boundary_center_x
-    bottom_down_center_y = bottom_left_boundary_center_y \
-                - bottom_left_boundary_width - bottom_down_width \
-                - 0.2 # dheight
+    #bottom_right_boundary_center_x = bottom_left_boundary_center_x \
+    #            + bottom_left_boundary_height + parking_height \
+    #            + bottom_right_boundary_height
+    #bottom_right_boundary_center_y = bottom_left_boundary_center_y
+    #bottom_road_edge_y = bottom_left_boundary_center_y + \
+    #                bottom_left_boundary_width 
+    #bottom_down_width = upper_boundary_width 
+    #bottom_down_height = parking_height / 2 
+    #upper_boundary_center_x = bottom_left_boundary_center_x \
+    #                + bottom_left_boundary_height + parking_height / 2
+    #bottom_down_center_x = upper_boundary_center_x
+    #bottom_down_center_y = bottom_left_boundary_center_y \
+    #            - bottom_left_boundary_width - bottom_down_width \
+    #            - 0.2 # dheight
     assert roi_boundaries[7].y > roi_boundaries[0].y, \
             "road width is not corrent from roi boundary points"
     road_width_ = (roi_boundaries[7].y - roi_boundaries[0].y) / 2
-    road_center_y = bottom_road_edge_y + road_width_
-    upper_boundary_center_y = road_center_y + road_width_ + \
-                                upper_boundary_width
-    bottom_left_right_dx_ = -0.3
+    #road_center_y = bottom_road_edge_y + road_width_
+    #upper_boundary_center_y = road_center_y + road_width_ + \
+    #                            upper_boundary_width
+    #bottom_left_right_dx_ = -0.3
 
+    # test
+    staticObstsInfo = {}
+    map_ = getValetStaticObstsAndUpdateInfo(
+        parking_height, parking_width, bottom_left_boundary_height, 
+        upper_boundary_width, upper_boundary_height,
+        bottom_left_boundary_center_x, bottom_left_boundary_center_y, 
+        road_width_,
+        staticObstsInfo
+    )
+
+    '''
     left_bottom = [
                     bottom_left_boundary_center_x + bottom_left_right_dx_, 
                     bottom_left_boundary_center_y, 0, bottom_left_boundary_width,
@@ -100,6 +109,7 @@ def generate_map(roi_boundaries, vehicle_pos, parking_pos):
             upper_boundary_center_x, upper_boundary_center_y, 
             0, upper_boundary_width, upper_boundary_height
           ]
+    
   
     start = [vehicle_pos.x, vehicle_pos.y, 
             0, 0., 0]
@@ -119,6 +129,9 @@ def generate_map(roi_boundaries, vehicle_pos, parking_pos):
           "width:", top[3], "height:", top[4])
 
     return [left_bottom, down_bottom, right_bottom, top]
+    '''
+
+    return map_
 
 def create_task(data):
     data = list(data.point)
