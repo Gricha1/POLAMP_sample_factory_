@@ -29,7 +29,7 @@ from sample_factory.run_algorithm import run_algorithm
 from EnvLib.ObstGeomEnvSampleFactory import *
 from utils_SF.residual_net import ResnetEncoder
 
-use_wandb = False
+use_wandb = True
 
 with open("configs/environment_configs.json", 'r') as f:
     our_env_config = json.load(f)
@@ -44,7 +44,6 @@ def custom_parse_args(argv=None, evaluation=False):
 
     parser = arg_parser(argv, evaluation=evaluation)
 
-    # add custom args here
     parser.add_argument('--my_custom_arg', type=int, 
                     default=42, help='Any custom arguments users might define')
     cfg = parse_args(argv=argv, evaluation=evaluation, parser=parser)
@@ -82,38 +81,6 @@ def custom_parse_args(argv=None, evaluation=False):
     return cfg
 
 def make_custom_env_func(full_env_name, cfg=None, env_config=None):
-    '''
-    maps = {}
-    trainTask = {}
-    valTasks = {}
-    second_goal = []
-  
-    if our_env_config["union"]:
-        environment_config = {
-            'car_config': car_config,
-            # 'tasks': trainTask,
-            # 'valTasks': valTasks,
-            # 'maps': maps,
-            'our_env_config' : our_env_config,
-            'reward_config' : reward_config,
-            'evaluation': cfg.evaluation,
-            # "second_goal" : second_goal
-        }
-    else:
-        environment_config = {
-            'car_config': car_config,
-            'tasks': trainTask,
-            'valTasks': valTasks,
-            'maps': maps,
-            'our_env_config' : our_env_config,
-            'reward_config' : reward_config,
-            'evaluation': cfg.evaluation
-        }
-
-    cfg.other_keys = environment_config
-
-    return ObsEnvironment(full_env_name, cfg['other_keys'])
-    '''
 
     environment_config = {
         'car_config': car_config,

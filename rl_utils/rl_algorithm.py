@@ -9,7 +9,7 @@ from sample_factory.algorithms.appo.model_utils import get_hidden_size
 from sample_factory.utils.utils import log, AttrDict
 
 def run_algorithm(cfg, env, agent, max_steps=30, wandb=None):
-    use_wandb_debug = False
+    use_wandb_debug = True
     if wandb is None:
         use_wandb_debug = False
     else:
