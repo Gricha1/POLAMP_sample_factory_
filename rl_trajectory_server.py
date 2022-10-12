@@ -9,7 +9,7 @@ from rl_utils.init_global_env_agent import init_global_env_agent
 from rl_utils.rl_algorithm import run_algorithm
 from rl_utils.utils import *
 
-use_wandb = True
+use_wandb = False
 if use_wandb:
   import wandb
   wandb.init(project='validate_polamp', entity='grisha1')

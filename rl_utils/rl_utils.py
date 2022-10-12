@@ -16,7 +16,7 @@ class point:
 def degToRad(deg):
     return deg * ONE_RAD_GRAD
 
-def generate_map(roi_boundaries, vehicle_pos, parking_pos):
+def generate_static_obsts_from_roi_points(roi_boundaries, car_config):
     '''
         roi_boundaries[0] = (roi_boundaries[0].x, roi_boundaries[0].y)
         vehicle_pos = (vehicle_pos.x, vehicle_pos.y)
@@ -47,40 +47,21 @@ def generate_map(roi_boundaries, vehicle_pos, parking_pos):
     if trained_parking_height < parking_height:
         shift_left_boundary_x = (parking_height - trained_parking_height) / 2
         parking_height = trained_parking_height
-    shift_left_boundary_width = 0
-    if trained_parking_width < parking_width:
-        parking_width = trained_parking_width
+
+    parking_height = trained_parking_height
+    #if parking_width < car_config["width"] + 0.1:
+    #    parking_width = trained_parking_width
+
     bottom_left_boundary_height = 6 # any value
     upper_boundary_width = 0.5 # any value
     upper_boundary_height = 17
     bottom_left_boundary_width = parking_width / 2
-    #bottom_right_boundary_width = parking_width / 2
-    #bottom_right_boundary_height = bottom_left_boundary_height
     bottom_left_boundary_center_x = roi_boundaries[1].x - 6 + shift_left_boundary_x
     bottom_left_boundary_center_y = roi_boundaries[0].y - bottom_left_boundary_width
-    #bottom_right_boundary_center_x = bottom_left_boundary_center_x \
-    #            + bottom_left_boundary_height + parking_height \
-    #            + bottom_right_boundary_height
-    #bottom_right_boundary_center_y = bottom_left_boundary_center_y
-    #bottom_road_edge_y = bottom_left_boundary_center_y + \
-    #                bottom_left_boundary_width 
-    #bottom_down_width = upper_boundary_width 
-    #bottom_down_height = parking_height / 2 
-    #upper_boundary_center_x = bottom_left_boundary_center_x \
-    #                + bottom_left_boundary_height + parking_height / 2
-    #bottom_down_center_x = upper_boundary_center_x
-    #bottom_down_center_y = bottom_left_boundary_center_y \
-    #            - bottom_left_boundary_width - bottom_down_width \
-    #            - 0.2 # dheight
     assert roi_boundaries[7].y > roi_boundaries[0].y, \
             "road width is not corrent from roi boundary points"
     road_width_ = (roi_boundaries[7].y - roi_boundaries[0].y) / 2
-    #road_center_y = bottom_road_edge_y + road_width_
-    #upper_boundary_center_y = road_center_y + road_width_ + \
-    #                            upper_boundary_width
-    #bottom_left_right_dx_ = -0.3
 
-    # test
     staticObstsInfo = {}
     map_ = getValetStaticObstsAndUpdateInfo(
         parking_height, parking_width, bottom_left_boundary_height, 
@@ -90,48 +71,7 @@ def generate_map(roi_boundaries, vehicle_pos, parking_pos):
         staticObstsInfo
     )
 
-    '''
-    left_bottom = [
-                    bottom_left_boundary_center_x + bottom_left_right_dx_, 
-                    bottom_left_boundary_center_y, 0, bottom_left_boundary_width,
-                    bottom_left_boundary_height
-                  ]
-    down_bottom = [
-                    bottom_down_center_x, bottom_down_center_y, 
-                    0, bottom_down_width, bottom_down_height
-                  ]
-    right_bottom = [
-                    bottom_right_boundary_center_x - bottom_left_right_dx_, 
-                    bottom_right_boundary_center_y, 0, bottom_right_boundary_width, 
-                    bottom_right_boundary_height
-                   ]
-    top = [
-            upper_boundary_center_x, upper_boundary_center_y, 
-            0, upper_boundary_width, upper_boundary_height
-          ]
-    
-  
-    start = [vehicle_pos.x, vehicle_pos.y, 
-            0, 0., 0]
-
-    print("DEBUG contrains:")
-    print("left_bottom: ", "x_c:", left_bottom[0], 
-          "y_c", left_bottom[1], "theta:", left_bottom[2],
-          "width:", left_bottom[3], "height:", left_bottom[4])
-    print("down_bottom: ", "x_c:", down_bottom[0], 
-          "y_c", down_bottom[1], "theta:", down_bottom[2],
-          "width:", down_bottom[3], "height:", down_bottom[4])
-    print("right_bottom: ", "x_c:", right_bottom[0], 
-          "y_c", right_bottom[1], "theta:", right_bottom[2],
-          "width:", right_bottom[3], "height:", right_bottom[4])
-    print("top: ", "x_c:", top[0], 
-          "y_c", top[1], "theta:", top[2],
-          "width:", top[3], "height:", top[4])
-
-    return [left_bottom, down_bottom, right_bottom, top]
-    '''
-
-    return map_
+    return map_, staticObstsInfo
 
 def create_task(data):
     data = list(data.point)
@@ -184,10 +124,30 @@ def create_task(data):
     for p in roi_boundary_points:
         print("x:", p.x, "y:", p.y)
 
-    generated_map = generate_map(roi_boundary_points, vehicle_pos, parking_pos)
+    generated_map, staticObstsInfo = generate_static_obsts_from_roi_points(
+                                                            roi_boundary_points,
+                                                            car_config)
+
     generated_start = [vehicle_pos.x, vehicle_pos.y, 0, 0., 0]
-    generated_goal = [parking_pos[0], parking_pos[1] - car_config["wheel_base"] / 2, 
-                        90 * (pi / 180), 0, 0]
+    #generated_goal = [parking_pos[0], parking_pos[1] - car_config["wheel_base"] / 2, 
+    #                  90 * (pi / 180), 0, 0]
+    generated_goal = [parking_pos[0], 
+                      staticObstsInfo["buttom_road_edge_y"] \
+                      - car_config["width"] / 2
+                      - car_config["wheel_base"] / 2, 
+                      90 * (pi / 180), 0, 0]
     generated_task = [generated_start, generated_goal]
+
+    # test task conditions
+    y_left_bottom_obst_edge = staticObstsInfo["bottom_left_boundary_center_y"] \
+                              + staticObstsInfo["bottom_left_boundary_width"]
+    y_upper_obst_edge = staticObstsInfo["upper_boundary_center_y"] \
+                              - staticObstsInfo["upper_boundary_width"]
+    assert vehicle_pos.y > y_left_bottom_obst_edge, \
+                    f"incorrect task: vehicle y is: {vehicle_pos.y} but " \
+                    + f"left bottom obst edge y is: {y_left_bottom_obst_edge}"
+    assert vehicle_pos.y < y_upper_obst_edge, \
+                    f"incorrect task: vehicle y is: {vehicle_pos.y} but " \
+                    + f"left bottom obst edge y is: {y_upper_obst_edge}"
     
     return (generated_map, generated_task, dynamic_obsts)

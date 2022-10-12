@@ -796,8 +796,9 @@ def getValetStaticObstsAndUpdateInfo(
     staticObstsInfo["bottom_left_boundary_center_y"] = bottom_left_boundary_center_y
     staticObstsInfo["bottom_left_boundary_height"] = bottom_left_boundary_height
     staticObstsInfo["bottom_left_boundary_width"] = bottom_left_boundary_width
-    staticObstsInfo["upper_boundary_width"] = upper_boundary_width
     staticObstsInfo["bottom_right_boundary_height"] = bottom_right_boundary_height
+    staticObstsInfo["upper_boundary_center_y"] = upper_boundary_center_y
+    staticObstsInfo["upper_boundary_width"] = upper_boundary_width
 
     left_bottom = [
                     bottom_left_boundary_center_x, 
