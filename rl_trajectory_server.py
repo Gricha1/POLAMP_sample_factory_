@@ -21,6 +21,10 @@ env, agent, cfg = init_global_env_agent()
 @post('/process')
 def my_process():
   request_ = json.loads(request.body.read())
+
+  # test parse cpp request if use http in cpp code
+  request_ = parse_cpp_request(request_)
+
   request_task = request_["task"]
 
   generated_tasks = transformHTTPRequestToTask(request_task)
@@ -42,11 +46,18 @@ def my_process():
 
   env.update_task(maps, generated_tasks)
 
+  # test
+  max_steps=env.max_episode_steps
+  #max_steps = 30
+
   trajectory_info, run_info = run_algorithm(cfg, env, agent, 
-                        max_steps=env.max_episode_steps, wandb=wandb)
+                        max_steps=max_steps, wandb=wandb)
 
   respond_ = {"trajectory": trajectory_info, "run_info": run_info}
   
   return(json.dumps(respond_))
+
+  #return("asdas")
   
 run(host='172.17.0.2', port=8080, debug=True)
+#run(host='172.17.0.3', port=8080, debug=True)
