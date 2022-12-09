@@ -1,6 +1,5 @@
 FROM continuumio/miniconda3
 
-
 RUN apt-get update 
 RUN apt install -y cmake libz-dev
 RUN apt-get install -y --no-install-recommends build-essential
@@ -8,6 +7,9 @@ RUN apt-get install ffmpeg libsm6 libxext6  -y
 COPY requirements.txt /tmp/
 COPY environment.yml /tmp/
 RUN conda env create -f /tmp/environment.yml
+
+# test
+
 #RUN pip3 install -r /tmp/requirements.txt
 #python -m pip install pyyaml
 

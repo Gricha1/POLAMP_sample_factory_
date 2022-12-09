@@ -147,4 +147,5 @@ dependencies:
     - wandb==0.12.17
     - webencodings==0.5.1
     - werkzeug==2.1.2
+    - bottle==0.12.23
 prefix: /home/reedgern/anaconda3/envs/POLAMP_samp_fac_env
