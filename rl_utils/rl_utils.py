@@ -4,10 +4,10 @@ import json
 from dataset_generation.utlis import *
 
 # test previous 
-#with open("modules/tools/valet_parking_rl/POLAMP_sample_factory_/configs/car_configs.json", 'r') as f:
-#    car_config = json.load(f)
-with open("configs/car_configs.json", 'r') as f:
+with open("modules/tools/valet_parking_rl/POLAMP_sample_factory_/configs/car_configs.json", 'r') as f:
     car_config = json.load(f)
+#with open("configs/car_configs.json", 'r') as f:
+#    car_config = json.load(f)
 
 ONE_RAD_GRAD = pi / 180
 
