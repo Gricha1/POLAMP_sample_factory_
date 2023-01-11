@@ -4,17 +4,50 @@ import json
 from dataset_generation.utlis import *
 
 # test previous 
-with open("modules/tools/valet_parking_rl/POLAMP_sample_factory_/configs/car_configs.json", 'r') as f:
-    car_config = json.load(f)
-#with open("configs/car_configs.json", 'r') as f:
+#with open("modules/tools/valet_parking_rl/POLAMP_sample_factory_/configs/car_configs.json", 'r') as f:
 #    car_config = json.load(f)
+with open("configs/car_configs.json", 'r') as f:
+    car_config = json.load(f)
 
 ONE_RAD_GRAD = pi / 180
 
+class Vec2d:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+class apollo_roi_boundary_data:
+    def __init__(self):
+        pass
+    
 class point:
 	def __init__(self, x, y):
 		self.x = x
 		self.y = y
+
+def parse_cpp_request(request):
+    request_ = {}
+    print("debug cpp request", request)
+    
+    # create apollo like data
+    data = apollo_roi_boundary_data()
+    points = []
+    for key in request:
+        val = request[key]
+        if key[0] == "x":
+            x = float(val)
+        elif key[0] == "y":
+            y = float(val)
+            points.append(Vec2d(x, y))
+    data.point = points
+
+    task = create_task(data)
+    print("debug generated task")
+    print("task:", task)
+    request_ = {}
+    request_["task"] = task
+    
+    return request_
 
 def degToRad(deg):
     return deg * ONE_RAD_GRAD
@@ -44,22 +77,30 @@ def generate_static_obsts_from_roi_points(roi_boundaries, car_config):
     assert roi_boundaries[1].y > roi_boundaries[2].y, \
         "parking width is not corrent from roi boundary points"
     parking_width = roi_boundaries[1].y - roi_boundaries[2].y
+    print("origin parking height:", parking_height)
+    print("origin parking width:", parking_width)
     trained_parking_height = 2.7 + 0.6
+    #trained_parking_height = 2.7 + 0.8
+    #trained_parking_height = 2.7 + 2
     trained_parking_width = 4.5
     shift_left_boundary_x = 0 # shift because use trained_parking_height
-    if trained_parking_height < parking_height:
-        shift_left_boundary_x = (parking_height - trained_parking_height) / 2
-        parking_height = trained_parking_height
-
+    #if trained_parking_height < parking_height:
+    #    shift_left_boundary_x = (parking_height - trained_parking_height) / 2
+    #    parking_height = trained_parking_height
+    shift_left_boundary_x = abs(parking_height - trained_parking_height) / 2
     parking_height = trained_parking_height
+    print("changed parking height:", parking_height)
+    print("changed parking width:", parking_width)
     #if parking_width < car_config["width"] + 0.1:
+    #if parking_width < trained_parking_width:
     #    parking_width = trained_parking_width
 
     bottom_left_boundary_height = 6 # any value
     upper_boundary_width = 0.5 # any value
     upper_boundary_height = 17
     bottom_left_boundary_width = parking_width / 2
-    bottom_left_boundary_center_x = roi_boundaries[1].x - 6 + shift_left_boundary_x
+    #bottom_left_boundary_center_x = roi_boundaries[1].x - 6 + shift_left_boundary_x
+    bottom_left_boundary_center_x = roi_boundaries[1].x - 6 - shift_left_boundary_x
     bottom_left_boundary_center_y = roi_boundaries[0].y - bottom_left_boundary_width
     assert roi_boundaries[7].y > roi_boundaries[0].y, \
             "road width is not corrent from roi boundary points"
@@ -123,6 +164,7 @@ def create_task(data):
     print("NEW MASSAGE")
     print("dynamic obstacles:", dynamic_obsts)
     print(f"vehicle pose is: {vehicle_pos.x}, {vehicle_pos.y}")
+    print("parking pose is:", parking_pos)
     print("roi boundary points:")
     for p in roi_boundary_points:
         print("x:", p.x, "y:", p.y)
@@ -136,7 +178,8 @@ def create_task(data):
     #                  90 * (pi / 180), 0, 0]
     generated_goal = [parking_pos[0], 
                       staticObstsInfo["buttom_road_edge_y"] \
-                      - car_config["width"] / 2
+                      #- car_config["width"] / 2
+                      - car_config["length"] / 2
                       - car_config["wheel_base"] / 2, 
                       90 * (pi / 180), 0, 0]
     generated_task = [generated_start, generated_goal]

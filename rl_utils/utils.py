@@ -4,17 +4,22 @@ from math import cos, sin, tan
 from math import pi
 
 # test
-from rl_utils.rl_utils import create_task
+#from rl_utils.rl_utils import create_task
 import json
 
+'''
 class apollo_roi_boundary_data:
     def __init__(self):
         pass
+'''
+'''
 class Vec2d:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+'''
 
+"""
 def parse_cpp_request(request):
     request_ = {}
     print("debug cpp request", request)
@@ -38,6 +43,7 @@ def parse_cpp_request(request):
     request_["task"] = task
     
     return request_
+"""
 
 def transformFuncImageToFunc(movement_func_image):
     def movement_func(last_state, current_steps, time_step=0.1, **args):

@@ -8,6 +8,7 @@ sys.path.insert(0, "sample-factory/")
 from rl_utils.init_global_env_agent import init_global_env_agent
 from rl_utils.rl_algorithm import run_algorithm
 from rl_utils.utils import *
+from rl_utils.rl_utils import *
 
 use_wandb = False
 if use_wandb:
@@ -47,7 +48,7 @@ def my_process():
   env.update_task(maps, generated_tasks)
 
   # test
-  max_steps=env.max_episode_steps
+  max_steps = env.max_episode_steps
   #max_steps = 30
 
   trajectory_info, run_info = run_algorithm(cfg, env, agent, 
@@ -56,8 +57,6 @@ def my_process():
   respond_ = {"trajectory": trajectory_info, "run_info": run_info}
   
   return(json.dumps(respond_))
-
-  #return("asdas")
   
 run(host='172.17.0.2', port=8080, debug=True)
 #run(host='172.17.0.3', port=8080, debug=True)
